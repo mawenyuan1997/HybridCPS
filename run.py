@@ -1,8 +1,23 @@
+from mininet.net import Mininet
+from mininet.cli import CLI
+
+from topo import TestTopo
+
+import sys
+
+class HybridCPS(object):
+
+    def __init__(self, net):
+        self.net = net
+        net.start()
+        net.pingAll()
+
+        net.stop()
+
+
 if __name__ == "__main__":
 
-    topo = SwatTopo()
+    topo = TestTopo()
     net = Mininet(topo=topo)
 
-    swat_s1_cps = SwatS1CPS(
-        name='swat_s1',
-        net=net)
+    hybridcps = HybridCPS(net=net)
