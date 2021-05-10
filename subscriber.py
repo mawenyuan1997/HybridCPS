@@ -12,7 +12,10 @@ def zerg_rush(n):
 
 all_lat = []
 def callback(ch):
-    r = redis.client.StrictRedis()
+    r = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
+            host='10.0.0.1', port=6379,
+            decode_responses=True, encoding='utf-8'))
+
     sub = r.pubsub()
     sub.subscribe(ch)
     while True:
