@@ -19,19 +19,21 @@ class TestTopo(Topo):
 
         RAs = []
         for i in range(nRA):
+            name = 'RA' + str(i)
             RAi = self.addHost(
-                'RA' + i,
-                ip=IP['RA' + i] + NETMASK,
-                mac=MAC['RA' + i])
+                name,
+                ip=IP[name] + NETMASK,
+                mac=MAC[name])
             self.addLink(RAi, switch)
             RAs.append(RAi)
 
         PAs = []
         for i in range(nPA):
+            name = 'PA' + str(i)
             PAi = self.addHost(
-                'PA' + i,
-                ip=IP['PA' + i] + NETMASK,
-                mac=MAC['PA' + i])
+                name,
+                ip=IP[name] + NETMASK,
+                mac=MAC[name])
             self.addLink(PAi, switch)
             PAs.append(PAi)
 
