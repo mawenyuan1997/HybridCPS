@@ -18,7 +18,7 @@ class TestTopo(Topo):
         nPA = 2
 
         RAs = []
-        for i in range(nRA):
+        for i in range(1, nRA + 1):
             name = 'RA' + str(i)
             RAi = self.addHost(
                 name,
@@ -28,7 +28,7 @@ class TestTopo(Topo):
             RAs.append(RAi)
 
         PAs = []
-        for i in range(nPA):
+        for i in range(1, nPA + 1):
             name = 'PA' + str(i)
             PAi = self.addHost(
                 name,
