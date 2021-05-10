@@ -14,9 +14,27 @@ class TestTopo(Topo):
             mac=MAC['pubsub'])
         self.addLink(pubsub, switch)
 
-        ra1 = self.addHost(
-            'ra1',
-            ip=IP['ra1'] + NETMASK,
-            mac=MAC['ra1'])
-        self.addLink(ra1, switch)
+        nRA = 4
+        nPA = 2
+
+        RAs = []
+        for i in range(nRA):
+            RAi = self.addHost(
+                'RA' + i,
+                ip=IP['RA' + i] + NETMASK,
+                mac=MAC['RA' + i])
+            self.addLink(RAi, switch)
+            RAs.append(RAi)
+
+        PAs = []
+        for i in range(nPA):
+            PAi = self.addHost(
+                'PA' + i,
+                ip=IP['PA' + i] + NETMASK,
+                mac=MAC['PA' + i])
+            self.addLink(PAi, switch)
+            PAs.append(PAi)
+
+
+
 
