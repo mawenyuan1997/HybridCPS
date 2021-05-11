@@ -12,9 +12,14 @@ class HybridCPS(object):
         net.start()
         net.pingAll()
 
+        nRA = 4
+        nPA = 2
+
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
 
+        PA1 = self.net.get('PA1')
+        PA1.cmd('')
         # net.stop()
 
 
