@@ -26,7 +26,7 @@ class HybridCPS(object):
         RA1 = self.net.get('RA1')
         for i in range(10):
             RA1.cmd(sys.executable + ' ResourceAgent.py RA' + str(i))
-
+        CLI(net)
 
 
 
