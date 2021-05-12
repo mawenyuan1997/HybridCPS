@@ -25,7 +25,7 @@ class HybridCPS(object):
     def test_transition(self):
         RA1 = self.net.get('RA1')
         for i in range(2):
-            RA1.cmdPrint(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &')
+            print(RA1.cmd(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &'))
 
 
 if __name__ == "__main__":
