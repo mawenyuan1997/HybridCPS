@@ -11,23 +11,21 @@ class HybridCPS(object):
     def __init__(self, net):
         self.net = net
         net.start()
-        net.pingAll()
+        # net.pingAll()
 
         nRA = 4
         nPA = 2
 
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
-        print('here1')
 
     def stop(self):
         self.net.stop()
 
     def test_transition(self):
-        print('here2')
         RA1 = self.net.get('RA1')
         for i in range(2):
-            RA1.cmd(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &')
+            RA1.cmdPrint(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &')
 
 
 if __name__ == "__main__":
