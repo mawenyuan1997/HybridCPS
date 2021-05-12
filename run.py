@@ -18,11 +18,13 @@ class HybridCPS(object):
 
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
+        print('here1')
 
     def stop(self):
         self.net.stop()
 
     def test_transition(self):
+        print('here2')
         RA1 = self.net.get('RA1')
         for i in range(2):
             RA1.cmd(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &')
