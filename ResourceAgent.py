@@ -9,7 +9,8 @@ import sys
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, tasks=['task1', 'task2'], data=None):
+    def __init__(self, name, tasks=['task1', 'task2'], data=[str(i) for i in range(10)]):
+        super().__init__()
         self.name = name
         self.tasks = tasks
         self.data = data
@@ -63,6 +64,12 @@ class ResourceAgent(Thread):
     def transition(self):
         for task in self.tasks:
             self.sub.unsubscribe(task)
+        for d in self.data:
+            now = time.time()
+            self.client.publish(d, str({'time': now,
+                                        'RA name': self.name,
+                                        'finish time': np.random.normal(10, 2)
+                                        }))
         print(self.name + ' ends at ' + str(time.time()))
 
     def run(self):

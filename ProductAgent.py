@@ -7,6 +7,7 @@ from threading import Thread
 class ProductAgent(Thread):
 
     def __init__(self, name, tasks, data=None):
+        super().__init__()
         self.name = name
         self.tasks = tasks
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
