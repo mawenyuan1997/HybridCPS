@@ -23,6 +23,9 @@ class ResourceAgent(Thread):
             self.sub.subscribe(task)
 
         print(self.name + ' starts at ' + str(time.time()))
+        f = open("start.txt", "a")
+        f.write(str(time.time()))
+        f.close()
         self.need_transition = True
 
     def send_command_and_wait(self):
@@ -71,6 +74,9 @@ class ResourceAgent(Thread):
                                         'finish time': np.random.normal(10, 2)
                                         }))
         print(self.name + ' ends at ' + str(time.time()))
+        f = open("end.txt", "a")
+        f.write(str(time.time()))
+        f.close()
 
     def run(self):
         while True:

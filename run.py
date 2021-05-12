@@ -25,7 +25,7 @@ class HybridCPS(object):
     def test_transition(self):
         RA1 = self.net.get('RA1')
         for i in range(10):
-            RA1.cmdPrint('python3 HybridCPS/ResourceAgent.py RA' + str(i))
+            RA1.cmd('python3 HybridCPS/ResourceAgent.py RA' + str(i) + ' &')
 
 
 
