@@ -3,12 +3,16 @@ import time
 import json
 import threading
 import numpy as np
+from threading import Thread
+import sys
 
-class ResourceAgent(object):
 
-    def __init__(self, name, tasks, data=None):
+class ResourceAgent(Thread):
+
+    def __init__(self, name, tasks=['task1', 'task2'], data=None):
         self.name = name
         self.tasks = tasks
+        self.data = data
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host='10.0.0.1', port=6379,
             decode_responses=True, encoding='utf-8'))
@@ -17,11 +21,13 @@ class ResourceAgent(object):
         for task in self.tasks:
             self.sub.subscribe(task)
 
+        print(self.name + ' starts at ' + str(time.time()))
+        self.need_transition = True
+
     def send_command_and_wait(self):
         time.sleep(10)
 
     def wait_for_task(self):
-
         while True:
             for m in self.sub.listen():
                 if m.get("type") == "message":
@@ -37,7 +43,7 @@ class ResourceAgent(object):
                                        'type': 'bid',
                                        'RA name': self.name,
                                        'finish time': np.random.normal(10, 2)
-                                        }))
+                                       }))
 
     def wait_for_confirm(self, task, PA):
         start = time.time()
@@ -54,8 +60,16 @@ class ResourceAgent(object):
     def send_finish_ack(self, PA):
         print('done')
 
-    def start(self):
+    def transition(self):
+        for task in self.tasks:
+            self.sub.unsubscribe(task)
+        print(self.name + ' ends at ' + str(time.time()))
+
+    def run(self):
         while True:
+            if self.need_transition:
+                self.transition()
+                break
             task, PA = self.wait_for_task()
             self.send_bid(task)
             bid_accept = self.wait_for_confirm(task, PA)
@@ -63,4 +77,6 @@ class ResourceAgent(object):
                 self.send_command_and_wait()
                 self.send_finish_ack(PA)
 
-
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    ResourceAgent(args[0]).start()

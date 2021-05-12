@@ -1,9 +1,10 @@
 import redis
 import time
 import json
-import threading
+from threading import Thread
 
-class ProductAgent(object):
+
+class ProductAgent(Thread):
 
     def __init__(self, name, tasks, data=None):
         self.name = name
@@ -18,7 +19,7 @@ class ProductAgent(object):
         self.client.publish(task_name, str({'time': now,
                                             'type': 'announcement',
                                             'PA name': self.name
-                                         }))
+                                            }))
         sub = self.client.pubsub()
         sub.subscribe(task_name)
         return sub
@@ -26,7 +27,7 @@ class ProductAgent(object):
     def wait_for_bid(self, channel):
         start = time.time()
         bids = []
-        while(time.time() - start < 10):
+        while (time.time() - start < 10):
             for m in channel.listen():
                 if m.get("type") == "message":
                     # latency = time.time() - float(m['data'])
@@ -51,7 +52,7 @@ class ProductAgent(object):
                                             'type': 'bid confirm',
                                             'RA name': bid['RA name'],
                                             'PA name': self.name
-                                         }))
+                                            }))
 
     def wait_for_finish(self, channel):
         while True:
@@ -63,8 +64,7 @@ class ProductAgent(object):
                     if msg['type'] == 'finish ack':
                         return
 
-
-    def start(self):
+    def run(self):
         # assume only one task
         task = self.tasks[0]
         channel = self.announce_task(task)
@@ -72,7 +72,3 @@ class ProductAgent(object):
         best_bid = self.find_best_bid(bids)
         self.confirm_bid(task, best_bid)
         self.wait_for_finish()
-
-
-
-

@@ -5,6 +5,7 @@ from topo import TestTopo
 
 import sys
 
+
 class HybridCPS(object):
 
     def __init__(self, net):
@@ -18,13 +19,15 @@ class HybridCPS(object):
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
 
-        PA1 = self.net.get('PA1')
-        PA1.cmd('')
-        # net.stop()
+    def stop(self):
+        self.net.stop()
+
+    def test_transition(self):
+        RA1 = self.net.get('RA1')
+        RA1.cmd(sys.executable + ' plc2.py &')
 
 
 if __name__ == "__main__":
-
     topo = TestTopo()
     net = Mininet(topo=topo)
 
