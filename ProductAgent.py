@@ -11,7 +11,7 @@ class ProductAgent(Thread):
         self.name = name
         self.tasks = tasks
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
-            host='10.0.0.1', port=6379,
+            host='192.168.1.100', port=6379,
             decode_responses=True, encoding='utf-8'))
 
     def announce_task(self, task_name):
