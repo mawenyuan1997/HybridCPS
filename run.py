@@ -24,7 +24,8 @@ class HybridCPS(object):
 
     def test_transition(self):
         RA1 = self.net.get('RA1')
-        RA1.cmd(sys.executable + ' plc2.py &')
+        for i in range(2):
+            RA1.cmd(sys.executable + ' ResourceAgent.py RA' + str(i) + ' &')
 
 
 if __name__ == "__main__":
@@ -32,3 +33,4 @@ if __name__ == "__main__":
     net = Mininet(topo=topo)
 
     hybridcps = HybridCPS(net=net)
+    hybridcps.test_transition()
