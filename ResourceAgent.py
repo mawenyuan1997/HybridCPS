@@ -43,11 +43,11 @@ class ResourceAgent(Thread):
 
     def send_bid(self, task):
         now = time.time()
-        self.client.publish(task, str({'time': now,
-                                       'type': 'bid',
-                                       'RA name': self.name,
-                                       'finish time': np.random.normal(10, 2)
-                                       }))
+        self.client.publish(task, json.dumps({'time': now,
+                                              'type': 'bid',
+                                              'RA name': self.name,
+                                              'finish time': np.random.normal(10, 2)
+                                              }))
 
     def wait_for_confirm(self, task, PA):
         start = time.time()
@@ -67,20 +67,20 @@ class ResourceAgent(Thread):
 
     def send_finish_ack(self, task, PA):
         now = time.time()
-        self.client.publish(task, str({'time': now,
-                                       'type': 'finish ack',
-                                       'task': task
-                                       }))
+        self.client.publish(task, json.dumps({'time': now,
+                                              'type': 'finish ack',
+                                              'task': task
+                                              }))
 
     def transition(self):
         for task in self.tasks:
             self.sub.unsubscribe(task)
         for d in self.data:
             now = time.time()
-            self.client.publish(d, str({'time': now,
-                                        'RA name': self.name,
-                                        'finish time': np.random.normal(10, 2)
-                                        }))
+            self.client.publish(d, json.dumps({'time': now,
+                                               'RA name': self.name,
+                                               'finish time': np.random.normal(10, 2)
+                                               }))
         print(self.name + ' ends at ' + str(time.time()))
         f = open("end.txt", "a")
         f.write(str(time.time()))
@@ -97,6 +97,7 @@ class ResourceAgent(Thread):
             if bid_accept:
                 self.send_command_and_wait()
                 self.send_finish_ack(PA)
+
 
 if __name__ == "__main__":
     args = sys.argv[1:]

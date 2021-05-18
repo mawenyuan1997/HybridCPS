@@ -19,10 +19,10 @@ class ProductAgent(Thread):
     def announce_task(self, task_name):
         now = time.time()
         print('Sending {0}'.format(now))
-        self.client.publish(task_name, str({'time': now,
-                                            'type': 'announcement',
-                                            'PA name': self.name
-                                            }))
+        self.client.publish(task_name, json.dumps({'time': now,
+                                                   'type': 'announcement',
+                                                   'PA name': self.name
+                                                   }))
         sub = self.client.pubsub()
         sub.subscribe(task_name)
         return sub
@@ -51,11 +51,11 @@ class ProductAgent(Thread):
 
     def confirm_bid(self, task_name, bid):
         now = time.time()
-        self.client.publish(task_name, str({'time': now,
-                                            'type': 'bid confirm',
-                                            'RA name': bid['RA name'],
-                                            'PA name': self.name
-                                            }))
+        self.client.publish(task_name, json.dumps({'time': now,
+                                                   'type': 'bid confirm',
+                                                   'RA name': bid['RA name'],
+                                                   'PA name': self.name
+                                                   }))
 
     def wait_for_finish(self, task, channel):
         while True:
@@ -78,6 +78,7 @@ class ProductAgent(Thread):
                 self.wait_for_finish(task)
         print('{} finished {}s'.format(self.name, time.time() - start_time))
 
+
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0]).start()
+    ProductAgent(args[0], {'A': 2, 'B': 1}).start()
