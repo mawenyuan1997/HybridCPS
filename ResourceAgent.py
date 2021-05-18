@@ -9,7 +9,7 @@ import sys
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, tasks=['task1', 'task2'], data=[str(i) for i in range(10)]):
+    def __init__(self, name, tasks, data=[str(i) for i in range(10)]):
         super().__init__()
         self.name = name
         self.tasks = tasks
@@ -51,7 +51,11 @@ class ResourceAgent(Thread):
 
     def wait_for_confirm(self, task, PA):
         start = time.time()
-        while time.time() - start < 10:
+        if task == 'A':
+            task_duration = 1 if self.name == 'RA1' else 3
+        else:
+            task_duration = 10
+        while time.time() - start < task_duration:
             for m in self.sub.listen():
                 if m.get("type") == "message":
                     # latency = time.time() - float(m['data'])
@@ -61,8 +65,12 @@ class ResourceAgent(Thread):
                         return msg['RA name'] == self.name
         return False
 
-    def send_finish_ack(self, PA):
-        print('done')
+    def send_finish_ack(self, task, PA):
+        now = time.time()
+        self.client.publish(task, str({'time': now,
+                                       'type': 'finish ack',
+                                       'task': task
+                                       }))
 
     def transition(self):
         for task in self.tasks:
@@ -80,9 +88,9 @@ class ResourceAgent(Thread):
 
     def run(self):
         while True:
-            if self.need_transition:
-                self.transition()
-                break
+            # if self.need_transition:
+            #     self.transition()
+            #     break
             task, PA = self.wait_for_task()
             self.send_bid(task)
             bid_accept = self.wait_for_confirm(task, PA)
@@ -92,4 +100,7 @@ class ResourceAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ResourceAgent(args[0]).start()
+    if args[1] == 2:
+        ResourceAgent(args[0], ['A', 'B']).start()
+    else:
+        ResourceAgent(args[0], ['A']).start()

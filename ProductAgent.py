@@ -55,21 +55,23 @@ class ProductAgent(Thread):
                                             'PA name': self.name
                                             }))
 
-    def wait_for_finish(self, channel):
+    def wait_for_finish(self, task, channel):
         while True:
             for m in channel.listen():
                 if m.get("type") == "message":
                     # latency = time.time() - float(m['data'])
                     # print('Recieved: {0}'.format(latency))
                     msg = json.loads(m['data'])
-                    if msg['type'] == 'finish ack':
+                    if msg['type'] == 'finish ack' and msg['task'] == task:
                         return
 
     def run(self):
-        # assume only one task
-        task = self.tasks[0]
-        channel = self.announce_task(task)
-        bids = self.wait_for_bid(channel)
-        best_bid = self.find_best_bid(bids)
-        self.confirm_bid(task, best_bid)
-        self.wait_for_finish()
+        start_time = time.time()
+        for task in ['A', 'B']:
+            for i in range(self.tasks[task]):
+                channel = self.announce_task(task)
+                bids = self.wait_for_bid(channel)
+                best_bid = self.find_best_bid(bids)
+                self.confirm_bid(task, best_bid)
+                self.wait_for_finish(task)
+        print('{} finished {}s'.format(self.name, time.time() - start_time))
