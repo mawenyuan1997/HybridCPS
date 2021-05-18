@@ -1,3 +1,5 @@
+import sys
+
 import redis
 import time
 import json
@@ -75,3 +77,7 @@ class ProductAgent(Thread):
                 self.confirm_bid(task, best_bid)
                 self.wait_for_finish(task)
         print('{} finished {}s'.format(self.name, time.time() - start_time))
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    ProductAgent(args[0]).start()
