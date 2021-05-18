@@ -17,8 +17,8 @@ class ProductAgent(Thread):
             decode_responses=True, encoding='utf-8'))
 
     def announce_task(self, task_name):
+        print('{} announce task {}'.format(self.name, task_name))
         now = time.time()
-        print('Sending {0}'.format(now))
         self.client.publish(task_name, json.dumps({'time': now,
                                                    'type': 'announcement',
                                                    'PA name': self.name
@@ -28,6 +28,7 @@ class ProductAgent(Thread):
         return sub
 
     def wait_for_bid(self, channel):
+        print('{} wait for bid'.format(self.name))
         start = time.time()
         bids = []
         while (time.time() - start < 10):
@@ -50,6 +51,7 @@ class ProductAgent(Thread):
         return best
 
     def confirm_bid(self, task_name, bid):
+        print('{} confirm bid {}'.format(self.name, task_name))
         now = time.time()
         self.client.publish(task_name, json.dumps({'time': now,
                                                    'type': 'bid confirm',
@@ -58,6 +60,7 @@ class ProductAgent(Thread):
                                                    }))
 
     def wait_for_finish(self, task, channel):
+        print('{} wait task {} finish'.format(self.name, task))
         while True:
             for m in channel.listen():
                 if m.get("type") == "message":

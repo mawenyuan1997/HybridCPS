@@ -32,6 +32,7 @@ class ResourceAgent(Thread):
         time.sleep(10)
 
     def wait_for_task(self):
+        print('{} wait for task'.format(self.name))
         while True:
             for m in self.sub.listen():
                 if m.get("type") == "message":
@@ -42,6 +43,7 @@ class ResourceAgent(Thread):
                         return m['channel'], msg['PA name']
 
     def send_bid(self, task):
+        print('{} wait for task'.format(self.name))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'bid',
@@ -50,6 +52,7 @@ class ResourceAgent(Thread):
                                               }))
 
     def wait_for_confirm(self, task, PA):
+        print('{} wait for task {} confirm from {}'.format(self.name, task, PA))
         start = time.time()
         if task == 'A':
             task_duration = 1 if self.name == 'RA1' else 3
@@ -66,6 +69,7 @@ class ResourceAgent(Thread):
         return False
 
     def send_finish_ack(self, task, PA):
+        print('{} send task {} finish ack'.format(self.name, task))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'finish ack',
