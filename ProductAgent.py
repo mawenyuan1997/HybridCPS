@@ -66,7 +66,9 @@ class ProductAgent(Thread):
             while self.message_queue:
                 channel, msg = self.message_queue.pop(0)
                 if msg['type'] == 'finish ack' and channel == task and msg['PA name'] == self.name:
+                    print('{} gets finish ack'.format(self.name))
                     return True
+        print('{} timeout for finish ack'.format(self.name))
         return False
 
 
