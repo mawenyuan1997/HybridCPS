@@ -5,11 +5,12 @@ import threading
 import numpy as np
 from threading import Thread
 import sys
+import socket
 
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, pos, tasks, data=[str(i) for i in range(10)]):
+    def __init__(self, name, pos, tasks, data):
         super().__init__()
         self.name = name
         self.pos = pos
@@ -23,10 +24,6 @@ class ResourceAgent(Thread):
         for task in self.tasks:
             self.sub.subscribe(task)
 
-        # print(self.name + ' starts at ' + str(time.time()))
-        # f = open("start.txt", "a")
-        # f.write(str(time.time()))
-        # f.close()
         self.need_transition = True
 
         self.message_queue = []
@@ -81,25 +78,12 @@ class ResourceAgent(Thread):
                                               'PA name': PA
                                               }))
 
-    def transition(self):
-        for task in self.tasks:
-            self.sub.unsubscribe(task)
-        for d in self.data:
-            now = time.time()
-            self.client.publish(d, json.dumps({'time': now,
-                                               'RA name': self.name,
-                                               'finish time': np.random.normal(10, 2)
-                                               }))
-        print(self.name + ' ends at ' + str(time.time()))
-        # f = open("end.txt", "a")
-        # f.write(str(time.time()))
-        # f.close()
+    def switch_to_centralized(self):
+        self.sub.unsubscribe(self.task)
+        self.centralized_mode()
 
-    def run(self):
+    def distributed_mode(self):
         while True:
-            # if self.need_transition:
-            #     self.transition()
-            #     break
             task, PA, current_pos = self.wait_for_task()
             self.send_bid(task, current_pos)
             bid_accept = self.wait_for_confirm(task, PA)
@@ -107,8 +91,22 @@ class ResourceAgent(Thread):
                 self.send_command_and_wait(task, current_pos)
                 self.send_finish_ack(task, PA)
 
+    def centralized_mode(self):
+        while True:
+            for d in self.data:
+                now = time.time()
+                print('{} start to publish data'.format(self.name))
+                self.client.publish(d, json.dumps({'time': now,
+                                                   'content': self.pos,
+                                                   'ra': self.name
+                                                  }))
+                return
+
+    def run(self):
+        self.distributed_mode()
+
     def listen(self):
-        def start_listener():
+        def start_pubsub_listener():
             for m in self.sub.listen():
                 if m.get("type") == "message":
                     # latency = time.time() - float(m['data'])
@@ -117,12 +115,29 @@ class ResourceAgent(Thread):
                     msg = json.loads(m['data'])
                     self.message_queue.append((channel, msg))
 
-        Thread(target=start_listener).start()
+        def start_socket_listener():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((self.name, 7000))
+                s.listen()
+                conn, addr = s.accept()
+                with conn:
+                    print('Connected by', addr)
+                    while True:
+                        data = conn.recv(1024)
+                        if not data:
+                            break
+                        msg = json.loads(data.decode())
+                        if msg['type'] == 'switch to centralized request':
+                            self.switch_to_centralized()
+
+        Thread(target=start_pubsub_listener()).start()
+        Thread(target=start_socket_listener()).start()
 
 
 if __name__ == "__main__":
     args = sys.argv[1:]
+    data = ['position']
     if args[1] == '2':
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A', 'B']).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A', 'B'], data).start()
     else:
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A']).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A'], data).start()

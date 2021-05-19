@@ -28,6 +28,10 @@ class Coordinator(Thread):
                         msg = json.loads(data.decode())
                         if msg['type'] == 'switch to centralized request':
                             conn.send(json.dumps({'type': 'agree to switch'}).encode())
+                            for ra in msg['RAs']:
+                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                                    s.connect((ra, 7000))
+                                    s.send(json.dumps({'type': 'switch to centralized request'}).encode())
         Thread(target=start_listener).start()
 
 if __name__ == "__main__":

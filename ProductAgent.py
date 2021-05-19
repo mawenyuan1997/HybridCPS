@@ -12,12 +12,14 @@ class ProductAgent(Thread):
         super().__init__()
         self.name = name
         self.tasks = tasks
+        self.data = data
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host='192.168.1.100', port=6379,
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
         self.message_queue = []
-        self.sub.subscribe(['A', 'B'])
+        self.sub.subscribe(self.tasks)
+        self.listen_thread = None
         self.listen()
 
     def announce_task(self, task, current_pos):
@@ -89,13 +91,20 @@ class ProductAgent(Thread):
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
 
+
+    def switch_to_centralized(self):
+        self.sub.unsubscribe(self.tasks)
+
+
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect(('192.168.1.100', 7000))
-            s.send(json.dumps({'type': 'switch to centralized request'}).encode())
+            s.send(json.dumps({'type': 'switch to centralized request',
+                               'RAs': ['192.168.1.1', '192.168.1.2', '192.168.1.3', '192.168.1.4']}).encode())
             data = s.recv(1024)
         msg = json.loads(data.decode())
         if msg['type'] == 'agree to switch':
+            self.switch_to_centralized()
             self.centralized_mode()
         else:
             self.distributed_mode()
@@ -110,7 +119,8 @@ class ProductAgent(Thread):
                     msg = json.loads(m['data'])
                     self.message_queue.append((channel, msg))
 
-        Thread(target=start_listener).start()
+        self.listen_thread = Thread(target=start_listener)
+        self.listen_thread.start()
 
 
 if __name__ == "__main__":
