@@ -17,6 +17,7 @@ class ProductAgent(Thread):
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
         self.message_queue = []
+        self.sub.subscribe(['A', 'B'])
         self.listen()
 
     def announce_task(self, task):
@@ -27,7 +28,7 @@ class ProductAgent(Thread):
                                               'PA name': self.name
                                               }))
 
-        self.sub.subscribe(task)
+
 
     def wait_for_bid(self, task):
         print('{} wait for {}\'s bid'.format(self.name, task))
