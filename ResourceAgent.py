@@ -22,50 +22,51 @@ class ResourceAgent(Thread):
         for task in self.tasks:
             self.sub.subscribe(task)
 
-        print(self.name + ' starts at ' + str(time.time()))
-        f = open("start.txt", "a")
-        f.write(str(time.time()))
-        f.close()
+        # print(self.name + ' starts at ' + str(time.time()))
+        # f = open("start.txt", "a")
+        # f.write(str(time.time()))
+        # f.close()
         self.need_transition = True
 
-    def send_command_and_wait(self):
-        time.sleep(10)
+        self.message_queue = []
+        self.listen()
+
+    def send_command_and_wait(self, task):
+        if task == 'A':
+            task_duration = 1 if self.name == 'RA1' else 3
+        else:
+            task_duration = 10
+        time.sleep(np.random.normal(task_duration, 2))
 
     def wait_for_task(self):
         print('{} wait for task'.format(self.name))
         while True:
-            for m in self.sub.listen():
-                if m.get("type") == "message":
-                    # latency = time.time() - float(m['data'])
-                    # print('Recieved: {0}'.format(latency))
-                    msg = json.loads(m['data'])
-                    if msg['type'] == 'announcement':
-                        return m['channel'], msg['PA name']
+            while self.message_queue:
+                channel, msg = self.message_queue.pop(0)
+                if msg['type'] == 'announcement':
+                    return channel, msg['PA name']
 
     def send_bid(self, task):
-        print('{} wait for task'.format(self.name))
-        now = time.time()
-        self.client.publish(task, json.dumps({'time': now,
+        print('{} send bid to task {}'.format(self.name, task))
+        if task == 'A':
+            task_duration = 1 if self.name == 'RA1' else 3
+        else:
+            task_duration = 10
+        self.client.publish(task, json.dumps({'time': time.time(),
                                               'type': 'bid',
                                               'RA name': self.name,
-                                              'finish time': np.random.normal(10, 2)
+                                              'finish time': task_duration
                                               }))
 
     def wait_for_confirm(self, task, PA):
         print('{} wait for task {} confirm from {}'.format(self.name, task, PA))
         start = time.time()
-        if task == 'A':
-            task_duration = 1 if self.name == 'RA1' else 3
-        else:
-            task_duration = 10
-        while time.time() - start < task_duration:
-            for m in self.sub.listen():
-                if m.get("type") == "message":
-                    # latency = time.time() - float(m['data'])
-                    # print('Recieved: {0}'.format(latency))
-                    msg = json.loads(m['data'])
-                    if msg['type'] == 'bid confirm' and m['channel'] == task and msg['PA name'] == PA:
-                        return msg['RA name'] == self.name
+        while time.time() - start < 10:
+            while self.message_queue:
+                channel, msg = self.message_queue.pop(0)
+                if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == PA:
+                    return msg['RA name'] == self.name
+        print('{} timeout wait for confirm'.format(self.name))
         return False
 
     def send_finish_ack(self, task, PA):
@@ -73,7 +74,7 @@ class ResourceAgent(Thread):
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'finish ack',
-                                              'task': task
+                                              'PA name': PA
                                               }))
 
     def transition(self):
@@ -86,9 +87,9 @@ class ResourceAgent(Thread):
                                                'finish time': np.random.normal(10, 2)
                                                }))
         print(self.name + ' ends at ' + str(time.time()))
-        f = open("end.txt", "a")
-        f.write(str(time.time()))
-        f.close()
+        # f = open("end.txt", "a")
+        # f.write(str(time.time()))
+        # f.close()
 
     def run(self):
         while True:
@@ -101,6 +102,18 @@ class ResourceAgent(Thread):
             if bid_accept:
                 self.send_command_and_wait()
                 self.send_finish_ack(PA)
+
+    def listen(self):
+        def start_listener():
+            for m in self.sub.listen():
+                if m.get("type") == "message":
+                    # latency = time.time() - float(m['data'])
+                    # print('Recieved: {0}'.format(latency))
+                    channel = m['channel']
+                    msg = json.loads(m['data'])
+                    self.message_queue.append((channel, msg))
+
+        Thread(target=start_listener).start()
 
 
 if __name__ == "__main__":
