@@ -79,7 +79,7 @@ class ResourceAgent(Thread):
                                               }))
 
     def switch_to_centralized(self):
-        self.sub.unsubscribe(self.task)
+        self.sub.unsubscribe(self.tasks)
         self.centralized_mode()
 
     def distributed_mode(self):
