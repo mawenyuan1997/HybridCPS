@@ -47,6 +47,7 @@ class ProductAgent(Thread):
             if bid['finish time'] < earliest:
                 earliest = bid['finish time']
                 best = bid
+        print('{} go to {}'.format(self.name, best['position']))
         return best
 
     def confirm_bid(self, task, bid):
