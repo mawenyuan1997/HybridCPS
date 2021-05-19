@@ -101,7 +101,7 @@ class ResourceAgent(Thread):
             bid_accept = self.wait_for_confirm(task, PA)
             if bid_accept:
                 self.send_command_and_wait(task)
-                self.send_finish_ack(PA)
+                self.send_finish_ack(task, PA)
 
     def listen(self):
         def start_listener():
