@@ -4,7 +4,7 @@ import redis
 import time
 import json
 from threading import Thread
-
+import socket
 
 class ProductAgent(Thread):
 
@@ -71,7 +71,8 @@ class ProductAgent(Thread):
         print('{} timeout for finish ack'.format(self.name))
         return False
 
-    def run(self):
+    def distributed_mode(self):
+        print('{} run in distributed mode'.format(self.name))
         start_time = time.time()
         current_pos = (10, 10)
         for task in self.tasks:
@@ -84,6 +85,20 @@ class ProductAgent(Thread):
             self.wait_for_finish(task, best_bid['finish time'])
             current_pos = best_bid['position']
         print('{} finished {}s'.format(self.name, time.time() - start_time))
+
+    def centralized_mode(self):
+        print('{} run in centralized mode'.format(self.name))
+
+    def run(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(('192.168.1.100', 6379))
+            s.send(json.dumps({'type': 'switch to centralized request'}).encode())
+            data = s.recv(1024)
+        msg = json.loads(data.decode())
+        if msg['type'] == 'agree to switch':
+            self.centralized_mode()
+        else:
+            self.distributed_mode()
 
     def listen(self):
         def start_listener():
