@@ -9,10 +9,11 @@ import socket
 class Coordinator(Thread):
 
     def __init__(self, host, port):
+        super().__init__()
         self.host = host
         self.port = port
 
-    def listen(self):
+    def run(self):
         def start_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((self.host, self.port))
