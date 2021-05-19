@@ -1,6 +1,5 @@
 from mininet.net import Mininet
 from mininet.cli import CLI
-from utils import IP, NETMASK, MAC
 from topo import TestTopo
 
 import sys
@@ -18,7 +17,7 @@ class HybridCPS(object):
 
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
-        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {}'.format('192.168.1.100', 6379))
+        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format('192.168.1.100', 7000))
 
     def stop(self):
         self.net.stop()
