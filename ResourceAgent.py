@@ -51,7 +51,7 @@ class ResourceAgent(Thread):
     def send_bid(self, task, origin):
         print('{} send bid to task {}'.format(self.name, task))
         if task == 'A':
-            task_duration = 20 if self.name == 'RA1' else 10
+            task_duration = 20 if self.name == '1' else 10
         else:
             task_duration = 10
         task_duration += abs(origin[0] - self.pos[0]) + abs(origin[1] - self.pos[1])
