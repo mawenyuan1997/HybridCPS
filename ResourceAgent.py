@@ -9,9 +9,10 @@ import sys
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, tasks, data=[str(i) for i in range(10)]):
+    def __init__(self, name, pos, tasks, data=[str(i) for i in range(10)]):
         super().__init__()
         self.name = name
+        self.pos = pos
         self.tasks = tasks
         self.data = data
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
@@ -31,11 +32,12 @@ class ResourceAgent(Thread):
         self.message_queue = []
         self.listen()
 
-    def send_command_and_wait(self, task):
+    def send_command_and_wait(self, task, origin):
         if task == 'A':
-            task_duration = 1 if self.name == 'RA1' else 3
+            task_duration = 20 if self.name == 'RA1' else 10
         else:
             task_duration = 10
+        task_duration += abs(origin[0] - self.pos[0]) + abs(origin[1] - self.pos[1])
         time.sleep(np.random.normal(task_duration, 2))
 
     def wait_for_task(self):
@@ -44,17 +46,19 @@ class ResourceAgent(Thread):
             while self.message_queue:
                 channel, msg = self.message_queue.pop(0)
                 if msg['type'] == 'announcement':
-                    return channel, msg['PA name']
+                    return channel, msg['PA name'], msg['current position']
 
-    def send_bid(self, task):
+    def send_bid(self, task, origin):
         print('{} send bid to task {}'.format(self.name, task))
         if task == 'A':
-            task_duration = 1 if self.name == 'RA1' else 3
+            task_duration = 20 if self.name == 'RA1' else 10
         else:
             task_duration = 10
+        task_duration += abs(origin[0] - self.pos[0]) + abs(origin[1] - self.pos[1])
         self.client.publish(task, json.dumps({'time': time.time(),
                                               'type': 'bid',
                                               'RA name': self.name,
+                                              'position': self.pos,
                                               'finish time': task_duration
                                               }))
 
@@ -96,11 +100,11 @@ class ResourceAgent(Thread):
             # if self.need_transition:
             #     self.transition()
             #     break
-            task, PA = self.wait_for_task()
-            self.send_bid(task)
+            task, PA, current_pos = self.wait_for_task()
+            self.send_bid(task, current_pos)
             bid_accept = self.wait_for_confirm(task, PA)
             if bid_accept:
-                self.send_command_and_wait(task)
+                self.send_command_and_wait(task, current_pos)
                 self.send_finish_ack(task, PA)
 
     def listen(self):
@@ -119,6 +123,6 @@ class ResourceAgent(Thread):
 if __name__ == "__main__":
     args = sys.argv[1:]
     if args[1] == '2':
-        ResourceAgent(args[0], ['A', 'B']).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A', 'B']).start()
     else:
-        ResourceAgent(args[0], ['A']).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A']).start()

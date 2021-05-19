@@ -20,15 +20,14 @@ class ProductAgent(Thread):
         self.sub.subscribe(['A', 'B'])
         self.listen()
 
-    def announce_task(self, task):
+    def announce_task(self, task, current_pos):
         print('{} announce task {}'.format(self.name, task))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'announcement',
-                                              'PA name': self.name
+                                              'PA name': self.name,
+                                              'current position': current_pos
                                               }))
-
-
 
     def wait_for_bid(self, task):
         print('{} wait for {}\'s bid'.format(self.name, task))
@@ -71,18 +70,18 @@ class ProductAgent(Thread):
         print('{} timeout for finish ack'.format(self.name))
         return False
 
-
     def run(self):
         start_time = time.time()
-        for task in ['A', 'B']:
-            for i in range(self.tasks[task]):
-                bids = []
-                while not bids:
-                    self.announce_task(task)
-                    bids = self.wait_for_bid(task)
-                best_bid = self.find_best_bid(bids)
-                self.confirm_bid(task, best_bid)
-                self.wait_for_finish(task, best_bid['finish time'])
+        current_pos = (10, 10)
+        for task in self.tasks:
+            bids = []
+            while not bids:
+                self.announce_task(task, current_pos)
+                bids = self.wait_for_bid(task)
+            best_bid = self.find_best_bid(bids)
+            self.confirm_bid(task, best_bid)
+            self.wait_for_finish(task, best_bid['finish time'])
+            current_pos = best_bid['position']
         print('{} finished {}s'.format(self.name, time.time() - start_time))
 
     def listen(self):
@@ -100,4 +99,4 @@ class ProductAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0], {'A': 2, 'B': 1}).start()
+    ProductAgent(args[0], ['A', 'B']).start()
