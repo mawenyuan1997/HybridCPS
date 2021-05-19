@@ -130,8 +130,8 @@ class ResourceAgent(Thread):
                         if msg['type'] == 'switch to centralized request':
                             self.switch_to_centralized()
 
-        Thread(target=start_pubsub_listener()).start()
-        Thread(target=start_socket_listener()).start()
+        Thread(target=start_pubsub_listener).start()
+        Thread(target=start_socket_listener).start()
 
 
 if __name__ == "__main__":
