@@ -34,7 +34,7 @@ class ProductAgent(Thread):
         print('{} wait for {}\'s bid'.format(self.name, task))
         start = time.time()
         bids = []
-        while (time.time() - start < 10):
+        while (time.time() - start < 3):
             while self.message_queue:
                 channel, msg = self.message_queue.pop(0)
                 if msg['type'] == 'bid' and channel == task:
@@ -61,6 +61,7 @@ class ProductAgent(Thread):
 
     def wait_for_finish(self, task, finish_time):
         print('{} wait task {} finish'.format(self.name, task))
+        start = time.time()
         while (time.time() - start < finish_time + 10):
             while self.message_queue:
                 channel, msg = self.message_queue.pop(0)
@@ -73,8 +74,10 @@ class ProductAgent(Thread):
         start_time = time.time()
         for task in ['A', 'B']:
             for i in range(self.tasks[task]):
-                self.announce_task(task)
-                bids = self.wait_for_bid(task)
+                bids = []
+                while not bids:
+                    self.announce_task(task)
+                    bids = self.wait_for_bid(task)
                 best_bid = self.find_best_bid(bids)
                 self.confirm_bid(task, best_bid)
                 self.wait_for_finish(task, best_bid['finish time'])
