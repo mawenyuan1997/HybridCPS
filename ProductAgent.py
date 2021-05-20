@@ -125,7 +125,6 @@ class ProductAgent(Thread):
                             self.knowledge[channel][msg['RA']] = msg['content']
                         else:
                             self.knowledge[channel] = {msg['RA']: msg['content']}
-                        print('receive {}'.format(msg))
 
         self.listen_thread = Thread(target=start_listener)
         self.listen_thread.start()

@@ -10,19 +10,19 @@ import socket
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, pos, tasks, data):
+    def __init__(self, name, pos, tasks):
         super().__init__()
         self.name = name
         self.pos = pos
         self.tasks = tasks
-        self.data = data
+        self.data = {'position': self.pos, 'capability': self.tasks}
+
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host='192.168.1.100', port=6379,
             decode_responses=True, encoding='utf-8'))
 
         self.sub = self.client.pubsub()
-        for task in self.tasks:
-            self.sub.subscribe(task)
+        self.sub.subscribe(self.tasks.keys())
 
         self.need_transition = True
 
@@ -79,7 +79,7 @@ class ResourceAgent(Thread):
                                               }))
 
     def switch_to_centralized(self):
-        self.sub.unsubscribe(self.tasks)
+        self.sub.unsubscribe(self.tasks.keys())
         self.centralized_mode()
 
     def distributed_mode(self):
@@ -93,11 +93,11 @@ class ResourceAgent(Thread):
 
     def centralized_mode(self):
         while True:
-            for d in self.data:
+            for d in self.data.keys():
                 now = time.time()
                 print('{} start to publish data'.format(self.name))
                 self.client.publish(d, json.dumps({'time': now,
-                                                   'content': self.pos,
+                                                   'content': self.data[d],
                                                    'RA': self.name
                                                   }))
             time.sleep(5)
@@ -136,8 +136,7 @@ class ResourceAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    data = ['position']
     if args[1] == '2':
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A', 'B'], data).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), {'A': 20, 'B': 10}).start()
     else:
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), ['A'], data).start()
+        ResourceAgent(args[0], (int(args[2]), int(args[3])), {'A': 10}).start()
