@@ -153,4 +153,4 @@ class ProductAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0], ['A', 'B'], ['position']).start()
+    ProductAgent(args[0], ['A', 'B'], ['position', 'capability']).start()
