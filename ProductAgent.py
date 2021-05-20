@@ -13,6 +13,7 @@ class ProductAgent(Thread):
         self.name = name
         self.tasks = tasks
         self.data = data
+        self.knowledge = {}
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host='192.168.1.100', port=6379,
             decode_responses=True, encoding='utf-8'))
@@ -94,7 +95,7 @@ class ProductAgent(Thread):
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
-
+        self.sub.subscribe(self.data)
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -117,7 +118,14 @@ class ProductAgent(Thread):
                     # print('Recieved: {0}'.format(latency))
                     channel = m['channel']
                     msg = json.loads(m['data'])
-                    self.message_queue.append((channel, msg))
+                    if channel in self.tasks:
+                        self.message_queue.append((channel, msg))
+                    else:
+                        if channel in self.knowledge:
+                            self.knowledge[channel][msg['RA']] = msg['content']
+                        else:
+                            self.knowledge[channel] = {msg['RA']: msg['content']}
+                        print('receive {}'.format(msg))
 
         self.listen_thread = Thread(target=start_listener)
         self.listen_thread.start()
@@ -125,4 +133,4 @@ class ProductAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0], ['A', 'B']).start()
+    ProductAgent(args[0], ['A', 'B'], ['position']).start()

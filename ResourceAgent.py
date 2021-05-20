@@ -98,9 +98,9 @@ class ResourceAgent(Thread):
                 print('{} start to publish data'.format(self.name))
                 self.client.publish(d, json.dumps({'time': now,
                                                    'content': self.pos,
-                                                   'ra': self.name
+                                                   'RA': self.name
                                                   }))
-                return
+            time.sleep(5)
 
     def run(self):
         self.distributed_mode()
