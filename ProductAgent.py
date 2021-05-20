@@ -124,6 +124,7 @@ class ProductAgent(Thread):
                                'PA': self.name}).encode())
         while not self.A_finish:
             time.sleep(1)
+        print('A finished at {} secs'.format(time.time() - start_time))
         self.current_pos = current_env['position'][ra_A]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((opt_B, 7000))
@@ -156,20 +157,21 @@ class ProductAgent(Thread):
         def start_socket_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((self.name, 7000))
-                s.listen()
-                conn, addr = s.accept()
-                with conn:
-                    print('Connected by', addr)
-                    while True:
-                        data = conn.recv(1024)
-                        if not data:
-                            break
-                        msg = json.loads(data.decode())
-                        if msg['type'] == 'finish ack':
-                            if msg['task'] == 'A':
-                                self.A_finish = True
-                            else:
-                                self.B_finish = True
+                while True:
+                    s.listen()
+                    conn, addr = s.accept()
+                    with conn:
+                        print('Connected by', addr)
+                        while True:
+                            data = conn.recv(1024)
+                            if not data:
+                                break
+                            msg = json.loads(data.decode())
+                            if msg['type'] == 'finish ack':
+                                if msg['task'] == 'A':
+                                    self.A_finish = True
+                                else:
+                                    self.B_finish = True
 
         def start_pubsub_listener():
             for m in self.sub.listen():

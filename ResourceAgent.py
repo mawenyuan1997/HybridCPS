@@ -118,22 +118,23 @@ class ResourceAgent(Thread):
         def start_socket_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((self.name, 7000))
-                s.listen()
-                conn, addr = s.accept()
-                with conn:
-                    print('Connected by', addr)
-                    while True:
-                        data = conn.recv(1024)
-                        if not data:
-                            break
-                        msg = json.loads(data.decode())
-                        if msg['type'] == 'switch to centralized request':
-                            self.switch_to_centralized()
-                        elif msg['type'] == 'order':
-                            def dist(a, b):
-                                return abs(a[0] - b[0]) + abs(a[1] - b[1])
-                            duration = dist(msg['current position'], self.pos) + self.tasks[msg['task']]
-                            Thread(target=self.wait_and_ack, args=(duration, msg['PA'])).start()
+                while True:
+                    s.listen()
+                    conn, addr = s.accept()
+                    with conn:
+                        print('Connected by', addr)
+                        while True:
+                            data = conn.recv(1024)
+                            if not data:
+                                break
+                            msg = json.loads(data.decode())
+                            if msg['type'] == 'switch to centralized request':
+                                self.switch_to_centralized()
+                            elif msg['type'] == 'order':
+                                def dist(a, b):
+                                    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+                                duration = dist(msg['current position'], self.pos) + self.tasks[msg['task']]
+                                Thread(target=self.wait_and_ack, args=(duration, msg['PA'])).start()
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
