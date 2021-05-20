@@ -92,7 +92,9 @@ class ProductAgent(Thread):
 
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
-        current_env = self.knowledge.copy()
+        current_env = {}
+        while not current_env:
+            current_env = self.knowledge.copy()
         print('current env: {}'.format(current_env))
 
         def dist(a,b):
@@ -109,7 +111,7 @@ class ProductAgent(Thread):
                         if duration < quickest:
                             quickest = duration
                             opt_A, opt_B = pos_A, pos_B
-        print(opt_A, opt_B)
+        print(opt_A, opt_B, quickest)
 
 
     def switch_to_centralized(self):
