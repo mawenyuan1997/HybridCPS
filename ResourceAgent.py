@@ -116,9 +116,9 @@ class ResourceAgent(Thread):
                     self.message_queue.append((channel, msg))
 
         def start_socket_listener():
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind((self.name, 7000))
-                while True:
+            while True:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.bind((self.name, 7000))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
