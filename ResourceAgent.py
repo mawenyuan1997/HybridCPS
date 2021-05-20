@@ -92,10 +92,10 @@ class ResourceAgent(Thread):
                 self.send_finish_ack(task, PA)
 
     def centralized_mode(self):
+        print('{} start to run centralized mode'.format(self.name))
         while True:
             for d in self.data.keys():
                 now = time.time()
-                print('{} start to publish data'.format(self.name))
                 self.client.publish(d, json.dumps({'time': now,
                                                    'content': self.data[d],
                                                    'RA': self.name

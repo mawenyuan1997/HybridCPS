@@ -14,6 +14,7 @@ class ProductAgent(Thread):
         self.tasks = tasks
         self.data = data
         self.knowledge = {}
+        self.current_pos = (10, 10)
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host='192.168.1.100', port=6379,
             decode_responses=True, encoding='utf-8'))
@@ -23,13 +24,13 @@ class ProductAgent(Thread):
         self.listen_thread = None
         self.listen()
 
-    def announce_task(self, task, current_pos):
+    def announce_task(self, task):
         print('{} announce task {}'.format(self.name, task))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'announcement',
                                               'PA name': self.name,
-                                              'current position': current_pos
+                                              'current position': self.current_pos
                                               }))
 
     def wait_for_bid(self, task):
@@ -77,20 +78,38 @@ class ProductAgent(Thread):
     def distributed_mode(self):
         print('{} run in distributed mode'.format(self.name))
         start_time = time.time()
-        current_pos = (10, 10)
+
         for task in self.tasks:
             bids = []
             while not bids:
-                self.announce_task(task, current_pos)
+                self.announce_task(task)
                 bids = self.wait_for_bid(task)
             best_bid = self.find_best_bid(bids)
             self.confirm_bid(task, best_bid)
             self.wait_for_finish(task, best_bid['finish time'])
-            current_pos = best_bid['position']
+            self.current_pos = best_bid['position']
         print('{} finished {}s'.format(self.name, time.time() - start_time))
 
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
+        current_env = self.knowledge.copy()
+        print('current env: {}'.format(current_env))
+
+        def dist(a,b):
+            return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+        opt_A, opt_B = None, None
+        for ra_A in current_env['capability'].keys():
+            if 'A' in current_env['capability'][ra_A]:
+                for ra_B in current_env['capability'].keys():
+                    if 'B' in current_env['capability'][ra_B]:
+                        pos_A = current_env['position'][ra_A]
+                        pos_B = current_env['position'][ra_B]
+                        duration = dist(self.current_pos, pos_A) + current_env['capability'][ra_A]['A'] + dist(pos_A, pos_B) + current_env['capability'][ra_B]['B']
+                        if duration < quickest:
+                            quickest = duration
+                            opt_A, opt_B = pos_A, pos_B
+        print(opt_A, opt_B)
 
 
     def switch_to_centralized(self):
