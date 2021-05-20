@@ -93,7 +93,7 @@ class ProductAgent(Thread):
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
         current_env = {}
-        while not current_env:
+        while not ('capability' in current_env and 'position' in current_env):
             current_env = self.knowledge.copy()
         print('current env: {}'.format(current_env))
 
