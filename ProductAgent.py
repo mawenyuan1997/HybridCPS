@@ -20,6 +20,8 @@ class ProductAgent(Thread):
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
         self.message_queue = []
+        self.A_finish = False
+        self.B_finish = False
         self.sub.subscribe(self.tasks)
         self.listen_thread = None
         self.listen()
@@ -96,6 +98,7 @@ class ProductAgent(Thread):
         while not ('capability' in current_env and 'position' in current_env):
             current_env = self.knowledge.copy()
         print('current env: {}'.format(current_env))
+        start_time = time.time()
 
         def dist(a,b):
             return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -111,9 +114,26 @@ class ProductAgent(Thread):
                         duration = dist(self.current_pos, pos_A) + current_env['capability'][ra_A]['A'] + dist(pos_A, pos_B) + current_env['capability'][ra_B]['B']
                         if duration < quickest:
                             quickest = duration
-                            opt_A, opt_B = pos_A, pos_B
+                            opt_A, opt_B = ra_A, ra_B
         print(opt_A, opt_B, quickest)
-
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((opt_A, 7000))
+            s.send(json.dumps({'type': 'order',
+                               'task': 'A',
+                               'current position': self.current_pos,
+                               'PA': self.name}).encode())
+        while not self.A_finish:
+            time.sleep(1)
+        self.current_pos = current_env['position'][ra_A]
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((opt_B, 7000))
+            s.send(json.dumps({'type': 'order',
+                               'task': 'B',
+                               'current position': self.current_pos,
+                               'PA': self.name}).encode())
+        while not self.B_finish:
+            time.sleep(1)
+        print('{} finish in {} secs'.format(self.name, time.time() - start_time))
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
@@ -133,7 +153,25 @@ class ProductAgent(Thread):
             self.distributed_mode()
 
     def listen(self):
-        def start_listener():
+        def start_socket_listener():
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((self.name, 7000))
+                s.listen()
+                conn, addr = s.accept()
+                with conn:
+                    print('Connected by', addr)
+                    while True:
+                        data = conn.recv(1024)
+                        if not data:
+                            break
+                        msg = json.loads(data.decode())
+                        if msg['type'] == 'finish ack':
+                            if msg['task'] == 'A':
+                                self.A_finish = True
+                            else:
+                                self.B_finish = True
+
+        def start_pubsub_listener():
             for m in self.sub.listen():
                 if m.get("type") == "message":
                     # latency = time.time() - float(m['data'])
@@ -148,8 +186,11 @@ class ProductAgent(Thread):
                         else:
                             self.knowledge[channel] = {msg['RA']: msg['content']}
 
-        self.listen_thread = Thread(target=start_listener)
+        self.listen_thread = Thread(target=start_pubsub_listener)
         self.listen_thread.start()
+
+        Thread(target=start_socket_listener).start()
+
 
 
 if __name__ == "__main__":

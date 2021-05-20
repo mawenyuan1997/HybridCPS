@@ -129,10 +129,22 @@ class ResourceAgent(Thread):
                         msg = json.loads(data.decode())
                         if msg['type'] == 'switch to centralized request':
                             self.switch_to_centralized()
+                        elif msg['type'] == 'order':
+                            def dist(a, b):
+                                return abs(a[0] - b[0]) + abs(a[1] - b[1])
+                            duration = dist(msg['current position'], self.pos) + self.tasks[msg['task']]
+                            Thread(target=self.wait_and_ack, args=(duration, msg['PA'])).start()
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 
+    def wait_and_ack(self, duration, PA):
+        time.sleep(np.random.normal(duration, 2))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((PA, 7000))
+            s.send(json.dumps({'type': 'finish ack',
+                               'task': 'A'
+                               }).encode())
 
 if __name__ == "__main__":
     args = sys.argv[1:]
