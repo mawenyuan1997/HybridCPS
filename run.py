@@ -1,7 +1,7 @@
 from mininet.net import Mininet
 from mininet.cli import CLI
 from topo import TestTopo
-
+import utils
 import sys
 
 
@@ -12,12 +12,9 @@ class HybridCPS(object):
         net.start()
         # net.pingAll()
 
-        nRA = 4
-        nPA = 2
-
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
-        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format('192.168.1.100', 7000))
+        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format('pubsub', 7000))
 
     def stop(self):
         self.net.stop()
@@ -28,13 +25,13 @@ class HybridCPS(object):
             RA1.cmd('python3 HybridCPS/ResourceAgent.py RA' + str(i) + ' &')
 
     def test_distributed(self):
-        PA1, RA1, RA2, RA3, RA4 = self.net.get('PA1', 'RA1', 'RA2', 'RA3', 'RA4')
+        N1, N2, N3, N4 = self.net.get('Node1', 'Node2', 'Node3', 'Node4')
 
-        PA1.cmd('python3 HybridCPS/ProductAgent.py PA1 &')
-        RA1.cmd('python3 HybridCPS/ResourceAgent.py RA1 2 0 10 &')
-        RA2.cmd('python3 HybridCPS/ResourceAgent.py RA2 1 20 10 &')
-        RA3.cmd('python3 HybridCPS/ResourceAgent.py RA3 1 10 0 &')
-        RA4.cmd('python3 HybridCPS/ResourceAgent.py RA4 1 20 0 &')
+        N1.cmd('python3 HybridCPS/ProductAgent.py PA1 {} &'.format(utils.IP['Node1']))
+        N1.cmd('python3 HybridCPS/ResourceAgent.py RA1 {} 2 0 10 &'.format(utils.IP['Node1']))
+        N2.cmd('python3 HybridCPS/ResourceAgent.py RA2 {} 1 20 10 &'.format(utils.IP['Node2']))
+        N3.cmd('python3 HybridCPS/ResourceAgent.py RA3 {} 1 10 0 &'.format(utils.IP['Node3']))
+        N4.cmd('python3 HybridCPS/ResourceAgent.py RA4 {} 1 20 0 &'.format(utils.IP['Node4']))
         CLI(net)
 
 

@@ -149,7 +149,7 @@ class ResourceAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args[1] == '2':
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), {'A': 20, 'B': 10}).start()
+    if args[2] == '2':
+        ResourceAgent(args[0], args[1], (int(args[3]), int(args[4])), {'A': 20, 'B': 10}).start()
     else:
-        ResourceAgent(args[0], (int(args[2]), int(args[3])), {'A': 10}).start()
+        ResourceAgent(args[0], args[1], (int(args[3]), int(args[4])), {'A': 10}).start()

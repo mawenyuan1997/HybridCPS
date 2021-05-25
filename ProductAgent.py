@@ -8,7 +8,7 @@ import socket
 
 class ProductAgent(Thread):
 
-    def __init__(self, name, tasks, data=None):
+    def __init__(self, name, addr, tasks, data=None):
         super().__init__()
         self.name = name
         self.tasks = tasks
@@ -198,4 +198,4 @@ class ProductAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0], ['A', 'B'], ['position', 'capability']).start()
+    ProductAgent(args[0], args[1], ['A', 'B'], data=['position', 'capability']).start()
