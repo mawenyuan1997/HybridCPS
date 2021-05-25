@@ -6,19 +6,21 @@ import numpy as np
 from threading import Thread
 import sys
 import socket
+import utils
 
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, pos, tasks):
+    def __init__(self, name, addr, pos, tasks, data=None):
         super().__init__()
         self.name = name
+        self.addr = addr
         self.pos = pos
         self.tasks = tasks
         self.data = {'position': self.pos, 'capability': self.tasks}
 
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
-            host='192.168.1.100', port=6379,
+            host=utils.IP['pubsub'], port=6379,
             decode_responses=True, encoding='utf-8'))
 
         self.sub = self.client.pubsub()
@@ -118,7 +120,7 @@ class ResourceAgent(Thread):
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.name, 7000))
+                    s.bind((self.addr, 7000))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:

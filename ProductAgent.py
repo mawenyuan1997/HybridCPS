@@ -5,12 +5,14 @@ import time
 import json
 from threading import Thread
 import socket
+import utils
 
 class ProductAgent(Thread):
 
     def __init__(self, name, addr, tasks, data=None):
         super().__init__()
         self.name = name
+        self.addr = addr
         self.tasks = tasks
         self.data = data
         self.knowledge = {}
@@ -142,7 +144,7 @@ class ProductAgent(Thread):
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect(('192.168.1.100', 7000))
+            s.connect((utils.IP['pubsub'], 7000))
             s.send(json.dumps({'type': 'switch to centralized request',
                                'RAs': ['192.168.1.1', '192.168.1.2', '192.168.1.3', '192.168.1.4']}).encode())
             data = s.recv(1024)
@@ -157,7 +159,7 @@ class ProductAgent(Thread):
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.name, 7000))
+                    s.bind((self.addr, 7000))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
