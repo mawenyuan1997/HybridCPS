@@ -169,6 +169,7 @@ class ProductAgent(Thread):
                             msg = json.loads(data.decode())
                             if msg['type'] == 'finish ack':
                                 if msg['task'] == 'A':
+                                    print('A finish')
                                     self.A_finish = True
                                 else:
                                     self.B_finish = True
