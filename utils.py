@@ -9,11 +9,9 @@ IP = {
 NETMASK = '/24'
 
 MAC = {
-    'RA1': '00:1D:9C:C7:B0:70',
-    'RA2': '00:1D:9C:C8:BC:46',
-    'RA3': '00:1D:9C:C8:BD:F2',
-    'RA4': '00:1D:9C:C8:BD:F3',
-    'PA1': '00:1D:9C:C8:BD:F0',
-    'PA2': '00:1D:9C:C8:BD:F5',
+    'Node1': '00:1D:9C:C7:B0:70',
+    'Node2': '00:1D:9C:C8:BC:46',
+    'Node3': '00:1D:9C:C8:BD:F2',
+    'Node4': '00:1D:9C:C8:BD:F3',
     'pubsub': 'AA:AA:AA:AA:AA:AA',
 }
