@@ -203,7 +203,8 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     name = args[0]
     addr = args[1]
+    port = args[2]
     tasks = ['A', 'B']
     interests = ['position', 'capability']
     start = (10, 10)
-    ProductAgent(name, addr, tasks, start, interests=interests).start()
+    ProductAgent(name, addr, port, tasks, start, interests=interests).start()
