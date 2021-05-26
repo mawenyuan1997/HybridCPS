@@ -6,6 +6,7 @@ import json
 from threading import Thread
 import socket
 
+
 class Coordinator(Thread):
 
     def __init__(self, addr, port):
@@ -28,11 +29,13 @@ class Coordinator(Thread):
                         msg = json.loads(data.decode())
                         if msg['type'] == 'switch to centralized request':
                             conn.send(json.dumps({'type': 'agree to switch'}).encode())
-                            for addr, port in msg['RAs']:
-                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                                    s.connect((addr, port))
-                                    s.send(json.dumps({'type': 'switch to centralized request'}).encode())
+                            for ra_addr, ra_port in msg['RAs']:
+                                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
+                                    ss.connect((ra_addr, ra_port))
+                                    ss.send(json.dumps({'type': 'switch to centralized request'}).encode())
+
         Thread(target=start_listener).start()
+
 
 if __name__ == "__main__":
     args = sys.argv[1:]
