@@ -27,7 +27,7 @@ class ResourceAgent(Thread):
         self.sub = self.client.pubsub()
         self.sub.subscribe(self.tasks.keys())
 
-        self.need_transition = True
+        self.current_mode = 'distributed'
 
         self.message_queue = []
         self.listen()
@@ -42,11 +42,11 @@ class ResourceAgent(Thread):
 
     def wait_for_task(self):
         print('{} wait for task'.format(self.name))
-        while True:
-            while self.message_queue:
-                channel, msg = self.message_queue.pop(0)
-                if msg['type'] == 'announcement':
-                    return channel, msg['PA name'], msg['current position']
+        while self.message_queue:
+            channel, msg = self.message_queue.pop(0)
+            if msg['type'] == 'announcement':
+                return channel, msg['PA name'], msg['current position']
+        return None, None, None
 
     def send_bid(self, task, origin):
         print('{} send bid to task {}'.format(self.name, task))
@@ -83,30 +83,35 @@ class ResourceAgent(Thread):
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks.keys())
-        self.centralized_mode()
+        self.current_mode = 'centralized'
 
     def distributed_mode(self):
-        while True:
-            task, PA, current_pos = self.wait_for_task()
-            self.send_bid(task, current_pos)
-            bid_accept = self.wait_for_confirm(task, PA)
-            if bid_accept:
-                self.send_command_and_wait(task, current_pos)
-                self.send_finish_ack(task, PA)
+        print('{} start to run distributed mode'.format(self.name))
+        task, PA, current_pos = self.wait_for_task()
+        if task is None:
+            return
+        self.send_bid(task, current_pos)
+        bid_accept = self.wait_for_confirm(task, PA)
+        if bid_accept:
+            self.send_command_and_wait(task, current_pos)
+            self.send_finish_ack(task, PA)
 
     def centralized_mode(self):
         print('{} start to run centralized mode'.format(self.name))
-        while True:
-            for d in self.data.keys():
-                now = time.time()
-                self.client.publish(d, json.dumps({'time': now,
-                                                   'content': self.data[d],
-                                                   'RA': self.name
-                                                  }))
-            time.sleep(5)
+        for d in self.data.keys():
+            now = time.time()
+            self.client.publish(d, json.dumps({'time': now,
+                                               'content': self.data[d],
+                                               'RA': self.name
+                                              }))
+        time.sleep(5)
 
     def run(self):
-        self.distributed_mode()
+        while True:
+            while self.current_mode == 'distributed':
+                self.distributed_mode()
+            while self.current_mode == 'centralized':
+                self.centralized_mode()
 
     def listen(self):
         def start_pubsub_listener():
@@ -132,6 +137,7 @@ class ResourceAgent(Thread):
                                 break
                             msg = json.loads(data.decode())
                             if msg['type'] == 'switch to centralized request':
+                                print('{} receive switch request'.format(self.name))
                                 self.switch_to_centralized()
                             elif msg['type'] == 'order':
                                 def dist(a, b):
