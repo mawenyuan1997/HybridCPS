@@ -7,7 +7,8 @@ IP = {
 }
 
 PORT = {
-    'pubsub': 6379
+    'pubsub': 6379,
+    'coordinator': 7000
 }
 
 NETMASK = '/24'

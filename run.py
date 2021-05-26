@@ -14,7 +14,7 @@ class HybridCPS(object):
 
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
-        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format('pubsub', 7000))
+        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format(utils.IP['pubsub'], utils.PORT['coordinator']))
 
     def stop(self):
         self.net.stop()

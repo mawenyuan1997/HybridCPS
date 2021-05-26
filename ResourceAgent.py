@@ -143,6 +143,7 @@ class ResourceAgent(Thread):
         Thread(target=start_socket_listener).start()
 
     def wait_and_ack(self, duration, PA):
+        print('wait for {}'.format(duration))
         time.sleep(np.random.normal(duration, 2))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((PA, 7000))
