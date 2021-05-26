@@ -120,7 +120,8 @@ class ProductAgent(Thread):
                             opt_A, opt_B = ra_A, ra_B
         print(opt_A, opt_B, quickest)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect(current_env['address'][opt_A])
+            A_addr, A_port = current_env['address'][opt_A][0], current_env['address'][opt_A][1]
+            s.connect((A_addr, A_port))
             s.send(json.dumps({'type': 'order',
                                'task': 'A',
                                'current position': self.current_pos,
@@ -130,7 +131,8 @@ class ProductAgent(Thread):
         print('A finished at {} secs'.format(time.time() - start_time))
         self.current_pos = current_env['position'][ra_A]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect(current_env['address'][opt_B])
+            B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
+            s.connect(B_addr, B_port)
             s.send(json.dumps({'type': 'order',
                                'task': 'B',
                                'current position': self.current_pos,
