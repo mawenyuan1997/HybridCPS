@@ -136,7 +136,7 @@ class ProductAgent(Thread):
         while not self.A_finish:
             time.sleep(1)
         print('A finished at {} secs'.format(time.time() - start_time))
-        self.current_pos = current_env['position'][ra_A]
+        self.current_pos = current_env['position'][opt_A]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
             s.connect((B_addr, B_port))
