@@ -41,7 +41,7 @@ class ResourceAgent(Thread):
         time.sleep(np.random.normal(task_duration, 2))
 
     def wait_for_task(self):
-        print('{} wait for task'.format(self.name))
+        # print('{} wait for task'.format(self.name))
         while self.message_queue:
             channel, msg = self.message_queue.pop(0)
             if msg['type'] == 'announcement':
@@ -86,7 +86,7 @@ class ResourceAgent(Thread):
         self.current_mode = 'centralized'
 
     def distributed_mode(self):
-        print('{} start to run distributed mode'.format(self.name))
+        # print('{} start to run distributed mode'.format(self.name))
         task, PA, current_pos = self.wait_for_task()
         if task is None:
             return
