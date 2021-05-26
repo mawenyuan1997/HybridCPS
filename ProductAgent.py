@@ -98,8 +98,15 @@ class ProductAgent(Thread):
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
         current_env = {}
-        while not ('position' in current_env and len(current_env['position']) == 4):
+        contain_all = False
+        while not contain_all:
             current_env = self.knowledge.copy()
+            contain_all = True
+            for d in self.interests:
+                if not (d in current_env and len(current_env[d]) == 4):
+                    contain_all = False
+                    break
+
         print('current env: {}'.format(current_env))
         start_time = time.time()
 
