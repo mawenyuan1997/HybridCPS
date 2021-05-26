@@ -97,7 +97,6 @@ class ResourceAgent(Thread):
             self.send_finish_ack(task, PA)
 
     def centralized_mode(self):
-        print('{} start to run centralized mode'.format(self.name))
         for d in self.data.keys():
             now = time.time()
             self.client.publish(d, json.dumps({'time': now,
@@ -111,6 +110,7 @@ class ResourceAgent(Thread):
             print('{} current mode: {}'.format(self.name, self.current_mode))
             while self.current_mode == 'distributed':
                 self.distributed_mode()
+            print('{} current mode: {}'.format(self.name, self.current_mode))
             while self.current_mode == 'centralized':
                 self.centralized_mode()
 
@@ -131,7 +131,6 @@ class ResourceAgent(Thread):
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
-                        print('Connected by', addr)
                         while True:
                             data = conn.recv(1024)
                             if not data:
@@ -153,7 +152,7 @@ class ResourceAgent(Thread):
         print('wait for {}'.format(duration))
         time.sleep(np.random.normal(duration, 2))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect(PA_addr[0], PA_addr[1])
+            s.connect((PA_addr[0], PA_addr[1]))
             s.send(json.dumps({'type': 'finish ack',
                                'task': 'A'
                                }).encode())
