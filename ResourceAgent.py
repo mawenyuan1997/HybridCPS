@@ -153,7 +153,7 @@ class ResourceAgent(Thread):
         print('wait for {}'.format(duration))
         time.sleep(np.random.normal(duration, 2))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((PA, 7000))
+            s.connect((PA, utils.PORT[PA]))
             s.send(json.dumps({'type': 'finish ack',
                                'task': 'A'
                                }).encode())

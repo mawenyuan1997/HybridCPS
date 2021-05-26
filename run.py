@@ -3,7 +3,7 @@ from mininet.cli import CLI
 from topo import TestTopo
 import utils
 import sys
-
+import time
 
 class HybridCPS(object):
 
@@ -27,11 +27,12 @@ class HybridCPS(object):
     def test_distributed(self):
         N1, N2, N3, N4 = self.net.get('Node1', 'Node2', 'Node3', 'Node4')
 
-        N1.cmd('python3 HybridCPS/ResourceAgent.py RA1 {} 8000 2 0 10 &'.format(utils.IP['Node1']))
-        N2.cmd('python3 HybridCPS/ResourceAgent.py RA2 {} 7000 1 20 10 &'.format(utils.IP['Node2']))
-        N3.cmd('python3 HybridCPS/ResourceAgent.py RA3 {} 7000 1 10 0 &'.format(utils.IP['Node3']))
-        N4.cmd('python3 HybridCPS/ResourceAgent.py RA4 {} 7000 1 20 0 &'.format(utils.IP['Node4']))
-        N1.cmd('python3 HybridCPS/ProductAgent.py PA1 {} 7000 &'.format(utils.IP['Node1']))
+        N1.cmd('python3 HybridCPS/ResourceAgent.py {} {} {} 2 0 10 &'.format('RA1', utils.IP['Node1'], utils.PORT['RA1']))
+        N2.cmd('python3 HybridCPS/ResourceAgent.py {} {} {} 1 20 10 &'.format('RA2', utils.IP['Node2'], utils.PORT['RA2']))
+        N3.cmd('python3 HybridCPS/ResourceAgent.py {} {} {} 1 10 0 &'.format('RA3', utils.IP['Node3'], utils.PORT['RA3']))
+        N4.cmd('python3 HybridCPS/ResourceAgent.py {} {} {} 1 20 0 &'.format('RA4', utils.IP['Node4'], utils.PORT['RA4']))
+        time.sleep(1)
+        N1.cmd('python3 HybridCPS/ProductAgent.py PA1 {} {} &'.format(utils.IP['Node1'], utils.PORT['PA1']))
         CLI(net)
 
 

@@ -147,8 +147,10 @@ class ProductAgent(Thread):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
             s.send(json.dumps({'type': 'switch to centralized request',
-                               'RAs': [(utils.IP['Node1'], 8000), (utils.IP['Node2'], 7000), (utils.IP['Node3'], 7000),
-                                       (utils.IP['Node4'], 7000)]}).encode())
+                               'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
+                                       (utils.IP['Node2'], utils.PORT['RA2']),
+                                       (utils.IP['Node3'], utils.PORT['RA3']),
+                                       (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
             data = s.recv(1024)
         msg = json.loads(data.decode())
         if msg['type'] == 'agree to switch':
