@@ -145,7 +145,7 @@ class ProductAgent(Thread):
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((utils.IP['pubsub'], 7000))
+            s.connect((utils.IP['pubsub'], utils.PORT['pubsub']))
             s.send(json.dumps({'type': 'switch to centralized request',
                                'RAs': [('192.168.1.1', 8000), ('192.168.1.2', 7000), ('192.168.1.3', 7000), ('192.168.1.4', 7000)]}).encode())
             data = s.recv(1024)
