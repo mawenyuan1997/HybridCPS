@@ -27,11 +27,11 @@ class HybridCPS(object):
     def test_distributed(self):
         N1, N2, N3, N4 = self.net.get('Node1', 'Node2', 'Node3', 'Node4')
 
-        N1.cmd('python3 HybridCPS/ProductAgent.py PA1 {} 7000 &'.format(utils.IP['Node1']))
         N1.cmd('python3 HybridCPS/ResourceAgent.py RA1 {} 8000 2 0 10 &'.format(utils.IP['Node1']))
         N2.cmd('python3 HybridCPS/ResourceAgent.py RA2 {} 7000 1 20 10 &'.format(utils.IP['Node2']))
         N3.cmd('python3 HybridCPS/ResourceAgent.py RA3 {} 7000 1 10 0 &'.format(utils.IP['Node3']))
         N4.cmd('python3 HybridCPS/ResourceAgent.py RA4 {} 7000 1 20 0 &'.format(utils.IP['Node4']))
+        N1.cmd('python3 HybridCPS/ProductAgent.py PA1 {} 7000 &'.format(utils.IP['Node1']))
         CLI(net)
 
 
