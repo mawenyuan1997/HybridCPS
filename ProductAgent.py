@@ -139,7 +139,7 @@ class ProductAgent(Thread):
         self.current_pos = current_env['position'][ra_A]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
-            s.connect(B_addr, B_port)
+            s.connect((B_addr, B_port))
             s.send(json.dumps({'type': 'order',
                                'task': 'B',
                                'current position': self.current_pos,
