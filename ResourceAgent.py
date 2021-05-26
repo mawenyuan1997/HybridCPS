@@ -11,16 +11,17 @@ import utils
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, addr, pos, tasks, data=None):
+    def __init__(self, name, addr, port, pos, tasks, data=None):
         super().__init__()
         self.name = name
         self.addr = addr
+        self.port = port
         self.pos = pos
         self.tasks = tasks
-        self.data = {'position': self.pos, 'capability': self.tasks}
+        self.data = data
 
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
-            host=utils.IP['pubsub'], port=6379,
+            host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
 
         self.sub = self.client.pubsub()
@@ -120,7 +121,7 @@ class ResourceAgent(Thread):
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.addr, 7000))
+                    s.bind((self.addr, self.port))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
@@ -151,7 +152,14 @@ class ResourceAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args[2] == '2':
-        ResourceAgent(args[0], args[1], (int(args[3]), int(args[4])), {'A': 20, 'B': 10}).start()
+    name = args[0]
+    addr, port = args[1], int(args[2])
+    numCap = int(args[3])
+    position = (int(args[4]), int(args[5]))
+    tasks = None
+    if numCap == 2:
+        tasks = {'A': 20, 'B': 10}
     else:
-        ResourceAgent(args[0], args[1], (int(args[3]), int(args[4])), {'A': 10}).start()
+        tasks = {'A': 10}
+    data = {'position': position, 'capability': tasks}
+    ResourceAgent(name, addr, port, position, tasks, data=data).start()

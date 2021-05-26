@@ -9,16 +9,17 @@ import utils
 
 class ProductAgent(Thread):
 
-    def __init__(self, name, addr, tasks, data=None):
+    def __init__(self, name, addr, port, tasks, start_pos, interests=None):
         super().__init__()
         self.name = name
         self.addr = addr
+        self.port = port
         self.tasks = tasks
-        self.data = data
+        self.interests = interests
         self.knowledge = {}
-        self.current_pos = (10, 10)
+        self.current_pos = start_pos
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
-            host='192.168.1.100', port=6379,
+            host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
         self.message_queue = []
@@ -140,7 +141,7 @@ class ProductAgent(Thread):
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
-        self.sub.subscribe(self.data)
+        self.sub.subscribe(self.interests)
 
     def run(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -159,7 +160,7 @@ class ProductAgent(Thread):
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.addr, 7000))
+                    s.bind((self.addr, self.port))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
@@ -200,4 +201,9 @@ class ProductAgent(Thread):
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    ProductAgent(args[0], args[1], ['A', 'B'], data=['position', 'capability']).start()
+    name = args[0]
+    addr = args[1]
+    tasks = ['A', 'B']
+    interests = ['position', 'capability']
+    start = (10, 10)
+    ProductAgent(name, addr, tasks, start, interests=interests).start()

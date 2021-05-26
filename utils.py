@@ -6,6 +6,10 @@ IP = {
     'pubsub': '192.168.1.100'
 }
 
+PORT = {
+    'pubsub': 6379
+}
+
 NETMASK = '/24'
 
 MAC = {
