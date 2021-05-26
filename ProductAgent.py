@@ -143,7 +143,7 @@ class ProductAgent(Thread):
             s.send(json.dumps({'type': 'order',
                                'task': 'B',
                                'current position': self.current_pos,
-                               'PA': self.name}).encode())
+                               'PA address': (self.addr, self.port)}).encode())
         while not self.B_finish:
             time.sleep(1)
         print('{} finish in {} secs'.format(self.name, time.time() - start_time))
