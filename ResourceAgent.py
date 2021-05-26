@@ -144,16 +144,16 @@ class ResourceAgent(Thread):
                                 def dist(a, b):
                                     return abs(a[0] - b[0]) + abs(a[1] - b[1])
                                 duration = dist(msg['current position'], self.pos) + self.tasks[msg['task']]
-                                Thread(target=self.wait_and_ack, args=(duration, msg['PA'])).start()
+                                Thread(target=self.wait_and_ack, args=(duration, msg['PA address'])).start()
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 
-    def wait_and_ack(self, duration, PA):
+    def wait_and_ack(self, duration, PA_addr):
         print('wait for {}'.format(duration))
         time.sleep(np.random.normal(duration, 2))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((PA, utils.PORT[PA]))
+            s.connect(PA_addr)
             s.send(json.dumps({'type': 'finish ack',
                                'task': 'A'
                                }).encode())
@@ -169,5 +169,5 @@ if __name__ == "__main__":
         tasks = {'A': 20, 'B': 10}
     else:
         tasks = {'A': 10}
-    data = {'position': position, 'capability': tasks}
+    data = {'position': position, 'capability': tasks, 'address': (addr, port)}
     ResourceAgent(name, addr, port, position, tasks, data=data).start()

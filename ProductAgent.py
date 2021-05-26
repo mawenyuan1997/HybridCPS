@@ -120,17 +120,17 @@ class ProductAgent(Thread):
                             opt_A, opt_B = ra_A, ra_B
         print(opt_A, opt_B, quickest)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((opt_A, 7000))
+            s.connect(current_env['address'][opt_A])
             s.send(json.dumps({'type': 'order',
                                'task': 'A',
                                'current position': self.current_pos,
-                               'PA': self.name}).encode())
+                               'PA address': (self.addr, self.port)}).encode())
         while not self.A_finish:
             time.sleep(1)
         print('A finished at {} secs'.format(time.time() - start_time))
         self.current_pos = current_env['position'][ra_A]
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((opt_B, 7000))
+            s.connect(current_env['address'][opt_B])
             s.send(json.dumps({'type': 'order',
                                'task': 'B',
                                'current position': self.current_pos,
@@ -208,6 +208,6 @@ if __name__ == "__main__":
     addr = args[1]
     port = int(args[2])
     tasks = ['A', 'B']
-    interests = ['position', 'capability']
+    interests = ['position', 'capability', 'address']
     start = (10, 10)
     ProductAgent(name, addr, port, tasks, start, interests=interests).start()
