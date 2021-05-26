@@ -108,6 +108,7 @@ class ResourceAgent(Thread):
 
     def run(self):
         while True:
+            print('{} current mode: {}'.format(self.name, self.current_mode))
             while self.current_mode == 'distributed':
                 self.distributed_mode()
             while self.current_mode == 'centralized':
