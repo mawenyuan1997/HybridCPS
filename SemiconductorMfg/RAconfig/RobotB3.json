@@ -1,0 +1,19 @@
+{
+  "tasks": [
+    "transport to BufferB3",
+    "transport to MachineG",
+    "transport to MachineH",
+    "transport to MachineI",
+    "transport to MachineJ"
+  ],
+  "data": {
+    "location": [80,90],
+    "destination": {
+      "BufferB3": [80, 72],
+      "MachineG": [70, 100],
+      "MachineH": [70,80],
+      "MachineI": [90, 100],
+      "MachineJ": [90, 80]
+    }
+  }
+}

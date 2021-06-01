@@ -9,7 +9,7 @@ import utils
 
 class ProductAgent(Thread):
 
-    def __init__(self, name, addr, port, tasks, start_pos, interests=None):
+    def __init__(self, name, addr, port, tasks, interests, start_pos):
         super().__init__()
         self.name = name
         self.addr = addr
@@ -214,7 +214,10 @@ if __name__ == "__main__":
     name = args[0]
     addr = args[1]
     port = int(args[2])
-    tasks = ['A', 'B']
-    interests = ['position', 'capability', 'address']
-    start = (10, 10)
-    ProductAgent(name, addr, port, tasks, start, interests=interests).start()
+    config_file = args[3]
+
+    f = open(config_file, )
+    config = json.load(f)
+    f.close()
+    ProductAgent(name, addr, port, config['tasks'],
+                 config['interests'], config['start position']).start()

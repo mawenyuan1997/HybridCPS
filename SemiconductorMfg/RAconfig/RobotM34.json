@@ -1,0 +1,17 @@
+{
+  "tasks": [
+    "transport to BufferM1",
+    "transport to BufferB3",
+    "transport to BufferB4",
+    "transport to BufferM2"
+  ],
+  "data": {
+    "location": [80,60],
+    "destination": {
+      "BufferM1": [62, 60],
+      "BufferB3": [80, 68],
+      "BufferB4": [80, 52],
+      "BufferM2": [98, 60]
+    }
+  }
+}

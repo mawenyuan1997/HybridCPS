@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    "storage to M2left",
+    "M2left to storage",
+    "storage to M2right",
+    "M2right to storage"
+  ],
+  "data": {
+    "location": [100, 60],
+    "unloading point": [[98, 60], [102, 60]],
+    "parts in storage": []
+  }
+}

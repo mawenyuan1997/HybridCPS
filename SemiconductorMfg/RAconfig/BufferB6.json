@@ -1,0 +1,13 @@
+{
+  "tasks": [
+    "storage to B6in",
+    "B6in to storage",
+    "storage to B6out",
+    "B6out to storage"
+  ],
+  "data": {
+    "location": [120, 50],
+    "unloading point": [[120, 52], [120, 48]],
+    "parts in storage": []
+  }
+}

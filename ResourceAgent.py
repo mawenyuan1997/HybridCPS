@@ -7,16 +7,15 @@ from threading import Thread
 import sys
 import socket
 import utils
-
+import os
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, addr, port, pos, tasks, data=None):
+    def __init__(self, name, addr, port, tasks, data):
         super().__init__()
         self.name = name
         self.addr = addr
         self.port = port
-        self.pos = pos
         self.tasks = tasks
         self.data = data
 
@@ -161,12 +160,11 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     name = args[0]
     addr, port = args[1], int(args[2])
-    numCap = int(args[3])
-    position = (int(args[4]), int(args[5]))
-    tasks = None
-    if numCap == 2:
-        tasks = {'A': 20, 'B': 10}
-    else:
-        tasks = {'A': 10}
-    data = {'position': position, 'capability': tasks, 'address': (addr, port)}
-    ResourceAgent(name, addr, port, position, tasks, data=data).start()
+    config_file = args[3]
+
+    f = open(config_file, )
+    config = json.load(f)
+    tasks = config['tasks']
+    data = config['data']
+    f.close()
+    ResourceAgent(name, addr, port, tasks, data).start()

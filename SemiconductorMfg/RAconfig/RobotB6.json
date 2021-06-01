@@ -1,0 +1,17 @@
+{
+  "tasks": [
+    "transport to BufferB6",
+    "transport to MachineR",
+    "transport to MachineS",
+    "transport to MachineT"
+  ],
+  "data": {
+    "location": [120,30],
+    "destination": {
+      "BufferB6": [120, 48],
+      "MachineR": [130, 40],
+      "MachineS": [110, 30],
+      "MachineT": [130, 20]
+    }
+  }
+}
