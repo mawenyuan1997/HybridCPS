@@ -20,7 +20,7 @@ class SemiconductorMfg(object):
         self.net.stop()
 
     def test_distributed(self):
-        Nodes = []
+        Nodes = [None] * 4
         Nodes[0], Nodes[1], Nodes[2], Nodes[3] = self.net.get('Node1', 'Node2', 'Node3', 'Node4')
         n = 0
         for config_file in os.listdir('SemiconductorMfg/RAconfig/'):
