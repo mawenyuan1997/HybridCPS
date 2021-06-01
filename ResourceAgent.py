@@ -24,7 +24,7 @@ class ResourceAgent(Thread):
             decode_responses=True, encoding='utf-8'))
 
         self.sub = self.client.pubsub()
-        self.sub.subscribe(self.tasks.keys())
+        self.sub.subscribe(self.tasks)
 
         self.current_mode = 'distributed'
 
