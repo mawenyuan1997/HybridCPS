@@ -30,6 +30,7 @@ class ResourceAgent(Thread):
         self.current_mode = 'distributed'
 
         self.pubsub_queue = []
+        self.message_queue = []
         self.listen()
 
     def wait_for_task(self):

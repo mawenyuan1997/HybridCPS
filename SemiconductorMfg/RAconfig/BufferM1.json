@@ -5,6 +5,7 @@
   "data": {
     "location": [60, 60],
     "unloading point": [[58, 60], [62, 60]],
-    "parts in storage": []
+    "parts in storage": [],
+    "velocity": 2
   }
 }
