@@ -1,17 +1,15 @@
 {
   "tasks": [
-    "transport to BufferM1",
-    "transport to BufferB3",
-    "transport to BufferB4",
-    "transport to BufferM2"
+    "transport"
   ],
   "data": {
     "location": [80,60],
-    "destination": {
-      "BufferM1": [62, 60],
-      "BufferB3": [80, 68],
-      "BufferB4": [80, 52],
-      "BufferM2": [98, 60]
-    }
+    "unloading point": [
+      [62, 60],
+      [80, 68],
+      [80, 52],
+      [98, 60]
+    ],
+    "velocity": 2
   }
 }

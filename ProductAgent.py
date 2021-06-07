@@ -7,24 +7,26 @@ from threading import Thread
 import socket
 import utils
 
+
 class ProductAgent(Thread):
 
-    def __init__(self, name, addr, port, tasks, interests, start_pos):
+    def __init__(self, name, ip, port, config):
         super().__init__()
         self.name = name
-        self.addr = addr
+        self.ip = ip
         self.port = port
-        self.tasks = tasks
-        self.interests = interests
+        self.tasks = config['tasks'],
+        self.interests = config['interests']
         self.knowledge = {}
-        self.current_pos = start_pos
+        self.type = config['type']
+        self.current_pos = config['start position']
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
+        self.pubsub_queue = []
         self.message_queue = []
-        self.A_finish = False
-        self.B_finish = False
+        self.ack_received = False
         self.sub.subscribe(self.tasks)
         self.listen_thread = None
         self.listen()
@@ -39,140 +41,183 @@ class ProductAgent(Thread):
                                               }))
 
     def wait_for_bid(self, task):
-        print('{} wait for {}\'s bid'.format(self.name, task))
+        # print('{} wait for {}\'s bid'.format(self.name, task))
         start = time.time()
         bids = []
-        while (time.time() - start < 3):
-            while self.message_queue:
-                channel, msg = self.message_queue.pop(0)
+        while time.time() - start < 3:
+            while self.pubsub_queue:
+                channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'bid' and channel == task:
                     bids.append(msg.copy())
         return bids
 
+    def distance(self, a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    # return the name of the closest resource
     def find_best_bid(self, bids):
-        earliest = 100000
+        dist = 100000
         best = None
         for bid in bids:
-            if bid['finish time'] < earliest:
-                earliest = bid['finish time']
-                best = bid
-        print('{} go to {}'.format(self.name, best['position']))
+            if self.distance(bid['RA location'], self.current_pos) < dist:
+                dist = self.distance(bid['RA location'], self.current_pos)
+                best = dict(bid)
+        print('{} go to {}'.format(self.name, best['RA location']))
         return best
 
-    def confirm_bid(self, task, bid):
+    # find the shortest path towards a resource
+    def find_path(self, bids, dest):
+        edges = set()
+        for bid in bids:
+            for e in bid['edges']:
+                edges.add((tuple(e[0]), tuple(e[1]), bid))
+        visited = set()
+
+        def dfs(x, path):
+            visited.add(x)
+            if x == dest:
+                return
+            for e in edges:
+                if e[0] == x and e[1] not in visited:
+                    path.append((e[2], x))
+                    dfs(e[1], path)
+                    if path[-1] == dest:
+                        return
+                    path = path[:-1]
+
+        path = []
+        dfs(self.current_pos, path)
+        return path
+
+    def confirm_bid(self, task, ra_name, task_info=None):
         print('{} confirm bid {}'.format(self.name, task))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'bid confirm',
-                                              'RA name': bid['RA name'],
+                                              'RA name': ra_name,
                                               'PA name': self.name
                                               }))
 
-    def wait_for_finish(self, task, finish_time):
-        print('{} wait task {} finish'.format(self.name, task))
+    # wait for RA's finish ack
+    def wait_for_finish(self, ra_name, finish_time):
+        print('{} wait ra {} finish'.format(self.name, ra_name))
         start = time.time()
-        while (time.time() - start < finish_time + 10):
+        while time.time() - start < finish_time + 10:
             while self.message_queue:
-                channel, msg = self.message_queue.pop(0)
-                if msg['type'] == 'finish ack' and channel == task and msg['PA name'] == self.name:
+                msg = self.message_queue.pop(0)
+                if msg['type'] == 'finish ack' and msg['RA name'] == ra_name and msg['PA name'] == self.name:
                     print('{} gets finish ack'.format(self.name))
                     return True
+                self.message_queue.append(msg)
         print('{} timeout for finish ack'.format(self.name))
         return False
+
+    def send_msg(self, ra_addr, msg):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            ip, port = ra_addr
+            s.connect((ip, port))
+            s.send(json.dumps(msg).encode())
 
     def distributed_mode(self):
         print('{} run in distributed mode'.format(self.name))
         start_time = time.time()
-
         for task in self.tasks:
+            # find a bidder for task
             bids = []
             while not bids:
                 self.announce_task(task)
                 bids = self.wait_for_bid(task)
             best_bid = self.find_best_bid(bids)
-            self.confirm_bid(task, best_bid)
-            self.wait_for_finish(task, best_bid['finish time'])
-            self.current_pos = best_bid['position']
+            self.confirm_bid(task, best_bid['RA name'])
+
+            # figure out topology
+            self.announce_task('transport')
+            bids = self.wait_for_bid('transport')
+            ra_team = self.find_path(bids)
+
+            # confirm all transport RAs on the chosen path
+            for bid, pos in ra_team:
+                self.confirm_bid('transport', bid['RA name'], task_info={'start': self.current_pos, 'destination': pos})
+
+            # send control command to transport RAs one by one
+            for bid, pos in ra_team:
+                self.send_msg(bid['RA address'], {'type': 'order',
+                                                  'task': 'transport',
+                                                  'start': self.current_pos,
+                                                  'destination': pos,
+                                                  'PA address': (self.ip, self.port),
+                                                  'PA name': self.name
+                                                  })
+                self.wait_for_finish(bid['RA name'], (self.distance(self.current_pos, pos) / bid['velocity']))
+                self.current_pos = pos.copy()
+
+            # send control command to processing RA
+            self.send_msg(best_bid['RA address'], {'type': 'order',
+                                                   'task': task,
+                                                   'PA address': (self.ip, self.port),
+                                                   'PA name': self.name
+                                                   })
+
+            self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
+            self.current_pos = best_bid['RA location']
         print('{} finished {}s'.format(self.name, time.time() - start_time))
 
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
-        current_env = {}
-        contain_all = False
-        while not contain_all:
-            current_env = self.knowledge.copy()
-            contain_all = True
-            for d in self.interests:
-                if not (d in current_env and len(current_env[d]) == 4):
-                    contain_all = False
-                    break
 
-        print('current env: {}'.format(current_env))
-        start_time = time.time()
-
-        def dist(a,b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-        opt_A, opt_B = None, None
-        quickest = 100000
-        for ra_A in current_env['capability'].keys():
-            if 'A' in current_env['capability'][ra_A]:
-                for ra_B in current_env['capability'].keys():
-                    if 'B' in current_env['capability'][ra_B]:
-                        pos_A = current_env['position'][ra_A]
-                        pos_B = current_env['position'][ra_B]
-                        duration = dist(self.current_pos, pos_A) + current_env['capability'][ra_A]['A'] + dist(pos_A, pos_B) + current_env['capability'][ra_B]['B']
-                        if duration < quickest:
-                            quickest = duration
-                            opt_A, opt_B = ra_A, ra_B
-        print(opt_A, opt_B, quickest)
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            A_addr, A_port = current_env['address'][opt_A][0], current_env['address'][opt_A][1]
-            s.connect((A_addr, A_port))
-            s.send(json.dumps({'type': 'order',
-                               'task': 'A',
-                               'current position': self.current_pos,
-                               'PA address': (self.addr, self.port)}).encode())
-        while not self.A_finish:
-            time.sleep(1)
-        print('A finished at {} secs'.format(time.time() - start_time))
-        self.current_pos = current_env['position'][opt_A]
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
-            s.connect((B_addr, B_port))
-            s.send(json.dumps({'type': 'order',
-                               'task': 'B',
-                               'current position': self.current_pos,
-                               'PA address': (self.addr, self.port)}).encode())
-        while not self.B_finish:
-            time.sleep(1)
-        print('{} finish in {} secs'.format(self.name, time.time() - start_time))
+        #
+        #
+        # print(opt_A, opt_B, quickest)
+        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        #     A_addr, A_port = current_env['address'][opt_A][0], current_env['address'][opt_A][1]
+        #     s.connect((A_addr, A_port))
+        #     s.send(json.dumps({'type': 'order',
+        #                        'task': 'A',
+        #                        'current position': self.current_pos,
+        #                        'PA address': (self.ip, self.port)}).encode())
+        # while not self.A_finish:
+        #     time.sleep(1)
+        # print('A finished at {} secs'.format(time.time() - start_time))
+        # self.current_pos = current_env['position'][opt_A]
+        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        #     B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
+        #     s.connect((B_addr, B_port))
+        #     s.send(json.dumps({'type': 'order',
+        #                        'task': 'B',
+        #                        'current position': self.current_pos,
+        #                        'PA address': (self.ip, self.port)}).encode())
+        # while not self.B_finish:
+        #     time.sleep(1)
+        # print('{} finish in {} secs'.format(self.name, time.time() - start_time))
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
         self.sub.subscribe(self.interests)
 
     def run(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
-            s.send(json.dumps({'type': 'switch to centralized request',
-                               'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
-                                       (utils.IP['Node2'], utils.PORT['RA2']),
-                                       (utils.IP['Node3'], utils.PORT['RA3']),
-                                       (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
-            data = s.recv(1024)
-        msg = json.loads(data.decode())
-        if msg['type'] == 'agree to switch':
-            self.switch_to_centralized()
-            self.centralized_mode()
-        else:
+        if self.type == 'rush order':
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
+                s.send(json.dumps({'type': 'switch to centralized request',
+                                   'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
+                                           (utils.IP['Node2'], utils.PORT['RA2']),
+                                           (utils.IP['Node3'], utils.PORT['RA3']),
+                                           (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
+                data = s.recv(1024)
+            msg = json.loads(data.decode())
+            if msg['type'] == 'agree to switch':
+                self.switch_to_centralized()
+                self.centralized_mode()
+            else:
+                self.distributed_mode()
+        elif self.type == 'normal order':
             self.distributed_mode()
 
     def listen(self):
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.addr, self.port))
+                    s.bind((self.ip, self.port))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
@@ -181,11 +226,7 @@ class ProductAgent(Thread):
                             if not data:
                                 break
                             msg = json.loads(data.decode())
-                            if msg['type'] == 'finish ack':
-                                if msg['task'] == 'A':
-                                    self.A_finish = True
-                                else:
-                                    self.B_finish = True
+                            self.message_queue.append(msg)
 
         def start_pubsub_listener():
             for m in self.sub.listen():
@@ -194,19 +235,17 @@ class ProductAgent(Thread):
                     # print('Recieved: {0}'.format(latency))
                     channel = m['channel']
                     msg = json.loads(m['data'])
-                    if channel in self.tasks:
-                        self.message_queue.append((channel, msg))
-                    else:
-                        if channel in self.knowledge:
-                            self.knowledge[channel][msg['RA']] = msg['content']
-                        else:
-                            self.knowledge[channel] = {msg['RA']: msg['content']}
+                    self.pubsub_queue.append((channel, msg))
+                    # else:
+                    #     if channel in self.knowledge:
+                    #         self.knowledge[channel][msg['RA name']] = msg['content']
+                    #     else:
+                    #         self.knowledge[channel] = {msg['RA name']: msg['content']}
 
         self.listen_thread = Thread(target=start_pubsub_listener)
         self.listen_thread.start()
 
         Thread(target=start_socket_listener).start()
-
 
 
 if __name__ == "__main__":
@@ -219,5 +258,4 @@ if __name__ == "__main__":
     f = open(config_file, )
     config = json.load(f)
     f.close()
-    ProductAgent(name, addr, port, config['tasks'],
-                 config['interests'], config['start position']).start()
+    ProductAgent(name, addr, port, config).start()

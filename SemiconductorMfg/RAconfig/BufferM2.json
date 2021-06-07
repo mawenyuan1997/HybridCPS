@@ -1,9 +1,6 @@
 {
   "tasks": [
-    "storage to M2left",
-    "M2left to storage",
-    "storage to M2right",
-    "M2right to storage"
+    "transport"
   ],
   "data": {
     "location": [100, 60],

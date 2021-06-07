@@ -9,12 +9,13 @@ import socket
 import utils
 import os
 
+
 class ResourceAgent(Thread):
 
     def __init__(self, name, addr, port, tasks, data):
         super().__init__()
         self.name = name
-        self.addr = addr
+        self.ip = addr
         self.port = port
         self.tasks = tasks
         self.data = data
@@ -28,57 +29,61 @@ class ResourceAgent(Thread):
 
         self.current_mode = 'distributed'
 
-        self.message_queue = []
+        self.pubsub_queue = []
         self.listen()
 
-    def send_command_and_wait(self, task, origin):
-        if task == 'A':
-            task_duration = 20 if self.name == 'RA1' else 10
-        else:
-            task_duration = 10
-        task_duration += abs(origin[0] - self.pos[0]) + abs(origin[1] - self.pos[1])
-        time.sleep(np.random.normal(task_duration, 2))
-
     def wait_for_task(self):
-        # print('{} wait for task'.format(self.name))
-        while self.message_queue:
-            channel, msg = self.message_queue.pop(0)
-            if msg['type'] == 'announcement':
-                return channel, msg['PA name'], msg['current position']
-        return None, None, None
+        print('{} wait for task'.format(self.name))
+        while True:
+            while self.pubsub_queue:
+                channel, msg = self.pubsub_queue.pop(0)
+                if msg['type'] == 'announcement':
+                    return channel, msg['PA name']
+            time.sleep(1)
 
-    def send_bid(self, task, origin):
+    def send_bid(self, task):
         print('{} send bid to task {}'.format(self.name, task))
-        if task == 'A':
-            task_duration = 20 if self.name == '1' else 10
+        bid = {'type': 'bid',
+               'RA name': self.name,
+               'RA location': self.data['location'],
+               'RA address': (self.ip, self.port)
+               }
+        if 'Robot' in self.name or 'Buffer' in self.name:
+            bid['edges'] = self.data['edges']
         else:
-            task_duration = 10
-        task_duration += abs(origin[0] - self.pos[0]) + abs(origin[1] - self.pos[1])
-        self.client.publish(task, json.dumps({'time': time.time(),
-                                              'type': 'bid',
-                                              'RA name': self.name,
-                                              'position': self.pos,
-                                              'finish time': task_duration
-                                              }))
+            bid['processing time'] = self.data['capability'][task]
+        self.client.publish(task, json.dumps(bid))
 
-    def wait_for_confirm(self, task, PA):
-        print('{} wait for task {} confirm from {}'.format(self.name, task, PA))
+    def wait_for_confirm(self, task, pa_name):
+        print('{} wait for task {} confirm from {}'.format(self.name, task, pa_name))
         start = time.time()
-        while time.time() - start < 10:
-            while self.message_queue:
-                channel, msg = self.message_queue.pop(0)
-                if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == PA:
-                    return msg['RA name'] == self.name
+        while time.time() - start < 5:
+            while self.pubsub_queue:
+                channel, msg = self.pubsub_queue.pop(0)
+                if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == pa_name:
+                    if msg['RA name'] == self.name:
+                        return True
         print('{} timeout wait for confirm'.format(self.name))
         return False
 
-    def send_finish_ack(self, task, PA):
-        print('{} send task {} finish ack'.format(self.name, task))
-        now = time.time()
-        self.client.publish(task, json.dumps({'time': now,
-                                              'type': 'finish ack',
-                                              'PA name': PA
-                                              }))
+    def distance(self, a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def get_duration(self, task, order_msg):
+        if order_msg['task'] == 'transport':
+            return (self.distance(self.data['location'], order_msg['start'])
+                    + self.distance(order_msg['start'], order_msg['destination'])) / self.data['velocity']
+        else:
+            return self.data['capability'][task]
+
+    def execute_task_and_ack(self, task, pa_addr, duration):
+        print('wait for {}'.format(duration))
+        time.sleep(np.random.normal(duration, 2))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((pa_addr[0], pa_addr[1]))
+            s.send(json.dumps({'type': 'finish ack',
+                               'task': task
+                               }).encode())
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks.keys())
@@ -86,14 +91,20 @@ class ResourceAgent(Thread):
 
     def distributed_mode(self):
         # print('{} start to run distributed mode'.format(self.name))
-        task, PA, current_pos = self.wait_for_task()
-        if task is None:
-            return
-        self.send_bid(task, current_pos)
-        bid_accept = self.wait_for_confirm(task, PA)
+        task, pa_name = self.wait_for_task()  # blocking
+        self.send_bid(task)
+        bid_accept = self.wait_for_confirm(task, pa_name)
         if bid_accept:
-            self.send_command_and_wait(task, current_pos)
-            self.send_finish_ack(task, PA)
+            # wait for PA's command and do the task
+            start = time.time()
+            while time.time() - start < 10:
+                while self.message_queue:
+                    msg = self.message_queue.pop(0)
+                    if msg['type'] == 'order' and msg['PA name'] == pa_name:
+                        duration = self.get_duration(task, msg)
+                        self.execute_task_and_ack(task, msg['PA address'], duration)
+                    else:
+                        self.message_queue.append(msg)
 
     def centralized_mode(self):
         for d in self.data.keys():
@@ -101,7 +112,7 @@ class ResourceAgent(Thread):
             self.client.publish(d, json.dumps({'time': now,
                                                'content': self.data[d],
                                                'RA': self.name
-                                              }))
+                                               }))
         time.sleep(5)
 
     def run(self):
@@ -121,12 +132,12 @@ class ResourceAgent(Thread):
                     # print('Recieved: {0}'.format(latency))
                     channel = m['channel']
                     msg = json.loads(m['data'])
-                    self.message_queue.append((channel, msg))
+                    self.pubsub_queue.append((channel, msg))
 
         def start_socket_listener():
             while True:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.addr, self.port))
+                    s.bind((self.ip, self.port))
                     s.listen()
                     conn, addr = s.accept()
                     with conn:
@@ -135,26 +146,14 @@ class ResourceAgent(Thread):
                             if not data:
                                 break
                             msg = json.loads(data.decode())
+                            self.message_queue.append(msg)
                             if msg['type'] == 'switch to centralized request':
                                 print('{} receive switch request'.format(self.name))
                                 self.switch_to_centralized()
-                            elif msg['type'] == 'order':
-                                def dist(a, b):
-                                    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-                                duration = dist(msg['current position'], self.pos) + self.tasks[msg['task']]
-                                Thread(target=self.wait_and_ack, args=(duration, msg['task'], msg['PA address'])).start()
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 
-    def wait_and_ack(self, duration, task, PA_addr):
-        print('wait for {}'.format(duration))
-        time.sleep(np.random.normal(duration, 2))
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((PA_addr[0], PA_addr[1]))
-            s.send(json.dumps({'type': 'finish ack',
-                               'task': task
-                               }).encode())
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -167,4 +166,19 @@ if __name__ == "__main__":
     tasks = config['tasks']
     data = config['data']
     f.close()
+    if "Buffer" in name:
+        edges = []
+        for p in data['unloading point']:
+            edges.append((data['location'], p))
+            edges.append((p, data['location']))
+        data['edges'] = edges
+    elif "Robot" in name:
+        edges = []
+        for p in data['unloading point']:
+            for q in data['unloading point']:
+                if p != q:
+                    edges.append((q, p))
+                    edges.append((p, q))
+        data['edges'] = edges
+
     ResourceAgent(name, addr, port, tasks, data).start()

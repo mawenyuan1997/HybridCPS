@@ -1,17 +1,15 @@
 {
   "tasks": [
-    "transport to BufferB2",
-    "transport to MachineD",
-    "transport to MachineE",
-    "transport to MachineF"
+    "transport"
   ],
   "data": {
     "location": [40,30],
-    "destination": {
-      "BufferB2": [40, 48],
-      "MachineD": [50, 40],
-      "MachineE": [30, 30],
-      "MachineF": [50, 20]
-    }
+    "unloading point": [
+      [40, 48],
+      [50, 40],
+      [30, 30],
+      [50, 20]
+    ],
+    "velocity": 2
   }
 }

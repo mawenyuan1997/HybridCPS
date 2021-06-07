@@ -1,9 +1,6 @@
 {
   "tasks": [
-    "storage to B4in",
-    "B4in to storage",
-    "storage to B4out",
-    "B4out to storage"
+    "transport"
   ],
   "data": {
     "location": [80, 50],
