@@ -32,6 +32,7 @@ class SemiconductorMfg(object):
                                                                                     config_dir + config_file))
             n += 1
         time.sleep(1)
+        config_dir = 'HybridCPS/SemiconductorMfg/PAconfig/'
         Nodes[0].cmd('python3 HybridCPS/ProductAgent.py {} {} {} {} &'.format("PA1",
                                                                                  utils.IP['Node1'],
                                                                                  utils.PORT['PA1'],
