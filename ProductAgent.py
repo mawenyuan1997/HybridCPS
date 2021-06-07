@@ -90,7 +90,7 @@ class ProductAgent(Thread):
         if not path:
             print('no path found')
         else:
-            print([(x[0], x[1]) for x in path])
+            print([x[1] for x in path])
         return path
 
     def confirm_bid(self, task, ra_name, task_info=None):

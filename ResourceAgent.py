@@ -51,6 +51,7 @@ class ResourceAgent(Thread):
                }
         if 'Robot' in self.name or 'Buffer' in self.name:
             bid['edges'] = self.data['edges']
+            bid['velocity'] = self.data['velocity']
         else:
             bid['processing time'] = self.data['capability'][task]
         self.client.publish(task, json.dumps(bid))
