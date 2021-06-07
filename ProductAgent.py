@@ -87,6 +87,8 @@ class ProductAgent(Thread):
 
         path = []
         dfs(self.current_pos, path)
+        if not path:
+            print('no path found')
         return path
 
     def confirm_bid(self, task, ra_name, task_info=None):
@@ -133,7 +135,7 @@ class ProductAgent(Thread):
             # figure out topology
             self.announce_task('transport')
             bids = self.wait_for_bid('transport')
-            ra_team = self.find_path(bids)
+            ra_team = self.find_path(bids, best_bid['RA location'])
 
             # confirm all transport RAs on the chosen path
             for bid, pos in ra_team:
