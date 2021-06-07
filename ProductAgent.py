@@ -19,7 +19,7 @@ class ProductAgent(Thread):
         self.interests = config['interests']
         self.knowledge = {}
         self.type = config['type']
-        self.current_pos = config['start position']
+        self.current_pos = tuple(config['start position'])
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
@@ -81,7 +81,7 @@ class ProductAgent(Thread):
                 if e[0] == x and e[1] not in visited:
                     path.append((e[2], x))
                     dfs(e[1], path)
-                    if path[-1] == dest:
+                    if path[-1][1] == dest:
                         return
                     path = path[:-1]
 
@@ -135,7 +135,7 @@ class ProductAgent(Thread):
             # figure out topology
             self.announce_task('transport')
             bids = self.wait_for_bid('transport')
-            ra_team = self.find_path(bids, best_bid['RA location'])
+            ra_team = self.find_path(bids, tuple(best_bid['RA location']))
 
             # confirm all transport RAs on the chosen path
             for bid, pos in ra_team:
@@ -161,7 +161,7 @@ class ProductAgent(Thread):
                                                    })
 
             self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
-            self.current_pos = best_bid['RA location']
+            self.current_pos = tuple(best_bid['RA location'])
         print('{} finished {}s'.format(self.name, time.time() - start_time))
 
     def centralized_mode(self):
