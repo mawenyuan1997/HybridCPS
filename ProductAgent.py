@@ -67,7 +67,7 @@ class ProductAgent(Thread):
 
     # find the shortest path towards a resource
     def find_path(self, bids, dest):
-        edges = set()
+        edges = []
         for bid in bids:
             for e in bid['edges']:
                 edges.add((tuple(e[0]), tuple(e[1]), bid))
