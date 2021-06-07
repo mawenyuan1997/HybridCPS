@@ -70,7 +70,7 @@ class ProductAgent(Thread):
         edges = []
         for bid in bids:
             for e in bid['edges']:
-                edges.add((tuple(e[0]), tuple(e[1]), bid))
+                edges.append((tuple(e[0]), tuple(e[1]), bid))
         visited = set()
 
         def dfs(x, path):
