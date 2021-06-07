@@ -84,7 +84,8 @@ class ResourceAgent(Thread):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((pa_addr[0], pa_addr[1]))
             s.send(json.dumps({'type': 'finish ack',
-                               'task': task
+                               'task': task,
+                               'RA name': self.name
                                }).encode())
 
     def switch_to_centralized(self):

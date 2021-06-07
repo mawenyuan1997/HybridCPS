@@ -79,7 +79,7 @@ class ProductAgent(Thread):
                 return
             for e in edges:
                 if e[0] == x and e[1] not in visited:
-                    path.append((e[2], x))
+                    path.append((e[2], e[1]))
                     dfs(e[1], path)
                     if path[-1][1] == dest:
                         return
