@@ -15,7 +15,7 @@ class ProductAgent(Thread):
         self.name = name
         self.ip = ip
         self.port = port
-        self.tasks = config['tasks'],
+        self.tasks = config['tasks']
         self.interests = config['interests']
         self.knowledge = {}
         self.type = config['type']
