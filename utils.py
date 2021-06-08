@@ -27,3 +27,4 @@ MAC = {
 }
 
 CONFIRM_TIMEOUT = 5
+STD_ERR = 1

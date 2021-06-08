@@ -80,7 +80,7 @@ class ResourceAgent(Thread):
 
     def execute_task_and_ack(self, task, pa_addr, duration):
         print('wait for {}'.format(duration))
-        time.sleep(np.random.normal(duration, 2))
+        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((pa_addr[0], pa_addr[1]))
             s.send(json.dumps({'type': 'finish ack',
