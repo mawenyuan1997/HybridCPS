@@ -25,3 +25,5 @@ MAC = {
     'Node4': '00:1D:9C:C8:BD:F3',
     'pubsub': 'AA:AA:AA:AA:AA:AA',
 }
+
+CONFIRM_TIMEOUT = 5

@@ -57,15 +57,15 @@ class ResourceAgent(Thread):
         self.client.publish(task, json.dumps(bid))
 
     def wait_for_confirm(self, task, pa_name):
-        print('{} wait for task {} confirm from {}'.format(self.name, task, pa_name))
         start = time.time()
-        while time.time() - start < 5:
+        while time.time() - start < utils.CONFIRM_TIMEOUT:
             while self.pubsub_queue:
                 channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == pa_name:
                     if msg['RA name'] == self.name:
+                        print('{} receive task {} confirm from {}'.format(self.name, task, pa_name))
                         return True
-        print('{} timeout wait for confirm'.format(self.name))
+        print('{} timeout wait for confirm'.format(self.name))  # TODO: add reject
         return False
 
     def distance(self, a, b):
