@@ -153,7 +153,7 @@ class ProductAgent(Thread):
                                                   'PA name': self.name
                                                   })
                 self.wait_for_finish(bid['RA name'], (self.distance(self.current_pos, pos) / bid['velocity']))
-                self.current_pos = pos.copy()
+                self.current_pos = pos
 
             # send control command to processing RA
             self.send_msg(best_bid['RA address'], {'type': 'order',
