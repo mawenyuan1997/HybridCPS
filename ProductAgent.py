@@ -109,7 +109,7 @@ class ProductAgent(Thread):
         while time.time() - start < finish_time + 10:
             while self.message_queue:
                 msg = self.message_queue.pop(0)
-                if msg['type'] == 'finish ack' and msg['RA name'] == ra_name and msg['PA name'] == self.name:
+                if msg['type'] == 'finish ack' and msg['RA name'] == ra_name:
                     print('{} gets finish ack'.format(self.name))
                     return True
                 self.message_queue.append(msg)
