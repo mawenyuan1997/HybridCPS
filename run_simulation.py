@@ -5,6 +5,7 @@ import utils
 import os
 import time
 
+
 class SemiconductorMfg(object):
 
     def __init__(self, net):
@@ -27,16 +28,17 @@ class SemiconductorMfg(object):
         for config_file in os.listdir(config_dir):
             ra_name = config_file.split('.')[0]
             Nodes[n % 4].cmd('python3 HybridCPS/ResourceAgent.py {} {} {} {} &'.format(ra_name,
-                                                                                    utils.IP['Node' + str(n % 4 + 1)],
-                                                                                    7000 + n,
-                                                                                    config_dir + config_file))
+                                                                                       utils.IP[
+                                                                                           'Node' + str(n % 4 + 1)],
+                                                                                       8000 + n,
+                                                                                       config_dir + config_file))
             n += 1
         time.sleep(1)
         config_dir = 'HybridCPS/SemiconductorMfg/PAconfig/'
         Nodes[0].cmd('python3 HybridCPS/ProductAgent.py {} {} {} {} &'.format("PA1",
-                                                                                 utils.IP['Node1'],
-                                                                                 utils.PORT['PA1'],
-                                                                                 config_dir + "PA1.json"))
+                                                                              utils.IP['Node1'],
+                                                                              utils.PORT['PA1'],
+                                                                              config_dir + "PA1.json"))
         CLI(net)
 
 
