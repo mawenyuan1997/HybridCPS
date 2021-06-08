@@ -138,10 +138,10 @@ class ResourceAgent(Thread):
                     self.pubsub_queue.append((channel, msg))
 
         def start_socket_listener():
-            while True:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.ip, self.port))
-                    s.listen()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((self.ip, self.port))
+                s.listen()
+                while True:
                     conn, addr = s.accept()
                     with conn:
                         while True:
