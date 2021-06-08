@@ -83,7 +83,7 @@ class ProductAgent(Thread):
                     dfs(e[1], path)
                     if path[-1][1] == dest:
                         return
-                    path = path[:-1]
+                    path.pop(-1)
 
         path = []
         dfs(self.current_pos, path)
