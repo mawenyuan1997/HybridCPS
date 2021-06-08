@@ -28,6 +28,7 @@ class ProductAgent(Thread):
         self.message_queue = []
         self.ack_received = False
         self.sub.subscribe(self.tasks)
+        self.sub.subscribe("transport")  # PA needs transport tasks in addition to processing tasks
         self.listen_thread = None
         self.listen()
 
