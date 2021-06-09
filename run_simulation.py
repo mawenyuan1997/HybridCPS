@@ -30,14 +30,14 @@ class SemiconductorMfg(object):
             Nodes[n % 4].cmd('python3 HybridCPS/ResourceAgent.py {} {} {} {} &'.format(ra_name,
                                                                                        utils.IP[
                                                                                            'Node' + str(n % 4 + 1)],
-                                                                                       8000 + n,
+                                                                                       utils.PORT['RA start'] + int(n/4),
                                                                                        config_dir + config_file))
             n += 1
         time.sleep(1)
         config_dir = 'HybridCPS/SemiconductorMfg/PAconfig/'
         Nodes[0].cmd('python3 HybridCPS/ProductAgent.py {} {} {} {} &'.format("PA1",
                                                                               utils.IP['Node1'],
-                                                                              utils.PORT['PA1'],
+                                                                              utils.PORT['PA start'],
                                                                               config_dir + "PA1.json"))
         CLI(net)
 

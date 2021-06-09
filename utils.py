@@ -9,11 +9,8 @@ IP = {
 PORT = {
     'pubsub': 6379,
     'coordinator': 7000,
-    'PA1': 8000,
-    'RA1': 7000,
-    'RA2': 7000,
-    'RA3': 7000,
-    'RA4': 7000
+    'PA start': 8000,
+    'RA start': 7000
 }
 
 NETMASK = '/24'
