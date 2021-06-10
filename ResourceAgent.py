@@ -43,7 +43,7 @@ class ResourceAgent(Thread):
             time.sleep(1)
 
     def send_bid(self, task):
-        print('{} send bid to task {}'.format(self.name, task))
+        # print('{} send bid to task {}'.format(self.name, task))
         bid = {'type': 'bid',
                'RA name': self.name,
                'RA location': self.data['location'],
@@ -58,14 +58,14 @@ class ResourceAgent(Thread):
 
     def wait_for_confirm(self, task, pa_name):
         start = time.time()
-        while time.time() - start < utils.CONFIRM_TIMEOUT:
+        while time.time() - start < utils.BID_CONFIRM_TIMEOUT:
             while self.pubsub_queue:
                 channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == pa_name:
                     if msg['RA name'] == self.name:
                         print('{} receive task {} confirm from {}'.format(self.name, task, pa_name))
                         return True
-        print('{} timeout wait for confirm'.format(self.name))  # TODO: add reject
+        # print('{} timeout wait for confirm'.format(self.name))  # TODO: add reject
         return False
 
     def distance(self, a, b):
@@ -79,7 +79,7 @@ class ResourceAgent(Thread):
             return self.data['capability'][task]
 
     def execute_task_and_ack(self, task, pa_addr, duration):
-        print('wait for {}'.format(duration))
+        print('{} wait for {}'.format(self.name, duration))
         time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((pa_addr[0], pa_addr[1]))
@@ -100,14 +100,17 @@ class ResourceAgent(Thread):
         if bid_accept:
             # wait for PA's command and do the task
             start = time.time()
-            while time.time() - start < 10:
+            while time.time() - start < utils.COMMAND_ORDER_TIMEOUT:
                 while self.message_queue:
                     msg = self.message_queue.pop(0)
                     if msg['type'] == 'order' and msg['PA name'] == pa_name:
                         duration = self.get_duration(task, msg)
                         self.execute_task_and_ack(task, msg['PA address'], duration)
+                        break
                     else:
                         self.message_queue.append(msg)
+            if time.time() - start > utils.COMMAND_ORDER_TIMEOUT:
+                print('{} timeout waiting for command from {}'.format(self.name, pa_name))
 
     def centralized_mode(self):
         for d in self.data.keys():
@@ -120,10 +123,10 @@ class ResourceAgent(Thread):
 
     def run(self):
         while True:
-            print('{} current mode: {}'.format(self.name, self.current_mode))
+            # print('{} current mode: {}'.format(self.name, self.current_mode))
             while self.current_mode == 'distributed':
                 self.distributed_mode()
-            print('{} current mode: {}'.format(self.name, self.current_mode))
+            # print('{} current mode: {}'.format(self.name, self.current_mode))
             while self.current_mode == 'centralized':
                 self.centralized_mode()
 

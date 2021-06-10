@@ -95,7 +95,7 @@ class ProductAgent(Thread):
         return path
 
     def confirm_bid(self, task, ra_name, task_info=None):
-        print('{} confirm bid {}'.format(self.name, task))
+        # print('{} confirm bid {}'.format(self.name, task))
         now = time.time()
         self.client.publish(task, json.dumps({'time': now,
                                               'type': 'bid confirm',
@@ -165,7 +165,7 @@ class ProductAgent(Thread):
 
             self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
             self.current_pos = tuple(best_bid['RA location'])
-        print('{} finished {}s'.format(self.name, time.time() - start_time))
+        print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
