@@ -6,7 +6,7 @@ import json
 from threading import Thread
 import socket
 
-
+# TODO
 class Coordinator(Thread):
 
     def __init__(self, addr, port):
