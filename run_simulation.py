@@ -39,6 +39,10 @@ class SemiconductorMfg(object):
                                                                               utils.IP['Node1'],
                                                                               utils.PORT['PA start'],
                                                                               config_dir + "PA1.json"))
+        Nodes[1].cmd('python3 HybridCPS/ProductAgent.py {} {} {} {} &'.format("PA2",
+                                                                              utils.IP['Node2'],
+                                                                              utils.PORT['PA start'],
+                                                                              config_dir + "PA2.json"))
         CLI(net)
 
 
