@@ -7,12 +7,16 @@ from threading import Thread
 import socket
 
 # TODO
+import utils
+
+
 class Coordinator(Thread):
 
-    def __init__(self, addr, port):
+    def __init__(self, addr, port, nodes):
         super().__init__()
         self.addr = addr
         self.port = port
+        self.nodes = nodes
 
     def run(self):
         def start_listener():
@@ -32,6 +36,13 @@ class Coordinator(Thread):
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
                                     ss.connect((ra_addr, ra_port))
                                     ss.send(json.dumps({'type': 'switch to centralized request'}).encode())
+                        elif msg['type'] == 'new product agent':
+                            pa_name = msg['PA name']
+                            pa_dir = msg['PA file directory']
+                            self.nodes[0].cmd('python3 HybridCPS/ProductAgent.py {} {} {} {} &'.format(pa_name,
+                                                                                                       utils.IP['Node1'],
+                                                                                                       utils.PORT['PA start'],
+                                                                                                       pa_dir))
 
         Thread(target=start_listener).start()
 
@@ -39,4 +50,5 @@ class Coordinator(Thread):
 if __name__ == "__main__":
     args = sys.argv[1:]
     addr, port = args[0], int(args[1])
-    Coordinator(addr, port).start()
+    nodes = args[2]
+    Coordinator(addr, port, nodes).start()

@@ -170,6 +170,8 @@ class ProductAgent(Thread):
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
 
+
+
         #
         #
         # print(opt_A, opt_B, quickest)
