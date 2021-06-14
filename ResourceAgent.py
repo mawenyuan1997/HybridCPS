@@ -12,7 +12,7 @@ import os
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, addr, port, tasks, data):
+    def __init__(self, name, addr, port, tasks, data, start_mode):
         super().__init__()
         self.name = name
         self.ip = addr
@@ -27,7 +27,7 @@ class ResourceAgent(Thread):
         self.sub = self.client.pubsub()
         self.sub.subscribe(self.tasks)
 
-        self.current_mode = 'distributed'
+        self.current_mode = start_mode
 
         self.pubsub_queue = []
         self.message_queue = []
@@ -113,13 +113,25 @@ class ResourceAgent(Thread):
                 print('{} timeout waiting for command from {}'.format(self.name, pa_name))
 
     def centralized_mode(self):
-        for d in self.data.keys():
-            now = time.time()
-            self.client.publish(d, json.dumps({'time': now,
-                                               'content': self.data[d],
-                                               'RA': self.name
-                                               }))
-        time.sleep(5)
+        def publish_data():
+            for d in self.data.keys():
+                now = time.time()
+                self.client.publish(d, json.dumps({'time': now,
+                                                   'content': self.data[d],
+                                                   'RA name': self.name
+                                                   }))
+                time.sleep(5)
+
+        # Thread(target=publish_data).start()
+
+        while self.message_queue:
+            msg = self.message_queue.pop(0)
+            if msg['type'] == 'order':
+                duration = self.get_duration(msg['task'], msg)
+                self.execute_task_and_ack(msg['task'], msg['PA address'], duration)
+                break
+            else:
+                self.message_queue.append(msg)
 
     def run(self):
         while True:
@@ -166,6 +178,7 @@ if __name__ == "__main__":
     name = args[0]
     addr, port = args[1], int(args[2])
     config_file = args[3]
+    start_mode = args[4]
 
     f = open(config_file, )
     config = json.load(f)
@@ -187,4 +200,4 @@ if __name__ == "__main__":
                     edges.append((p, q))
         data['edges'] = edges
 
-    ResourceAgent(name, addr, port, tasks, data).start()
+    ResourceAgent(name, addr, port, tasks, data, start_mode).start()

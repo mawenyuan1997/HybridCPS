@@ -10,13 +10,14 @@ import utils
 
 class ProductAgent(Thread):
 
-    def __init__(self, name, ip, port, config):
+    def __init__(self, name, ip, port, config, start_mode):
         super().__init__()
         self.name = name
         self.ip = ip
         self.port = port
         self.tasks = config['tasks']
         self.interests = config['interests']
+        self.current_mode = start_mode
         self.knowledge = {}
         self.type = config['type']
         self.current_pos = tuple(config['start position'])
@@ -117,9 +118,9 @@ class ProductAgent(Thread):
         print('{} timeout for finish ack'.format(self.name))
         return False
 
-    def send_msg(self, ra_addr, msg):
+    def send_msg(self, addr, msg):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            ip, port = ra_addr
+            ip, port = addr
             s.connect((ip, port))
             s.send(json.dumps(msg).encode())
 
@@ -167,63 +168,86 @@ class ProductAgent(Thread):
             self.current_pos = tuple(best_bid['RA location'])
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
+    def wait_for_response(self, msg_type, timeout):
+        start = time.time()
+        while time.time() - start < timeout:
+            while self.message_queue:
+                msg = self.message_queue.pop(0)
+                if msg['type'] == msg_type:
+                    print('{} gets {}'.format(self.name, msg_type))
+                    return msg
+                self.message_queue.append(msg)
+        print('{} timeout for {}'.format(self.name, msg_type))
+        return {}
+
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
+        start_time = time.time()
+        msg = {'type': 'plan request',
+               'start': self.current_pos,
+               'task': self.tasks[0],
+               'PA address': (self.ip, self.port)}
+        self.send_msg((utils.IP['central controller'], utils.PORT['central controller']), msg)
 
-        #
-        #
-        # print(opt_A, opt_B, quickest)
-        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        #     A_addr, A_port = current_env['address'][opt_A][0], current_env['address'][opt_A][1]
-        #     s.connect((A_addr, A_port))
-        #     s.send(json.dumps({'type': 'order',
-        #                        'task': 'A',
-        #                        'current position': self.current_pos,
-        #                        'PA address': (self.ip, self.port)}).encode())
-        # while not self.A_finish:
-        #     time.sleep(1)
-        # print('A finished at {} secs'.format(time.time() - start_time))
-        # self.current_pos = current_env['position'][opt_A]
-        # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        #     B_addr, B_port = current_env['address'][opt_B][0], current_env['address'][opt_B][1]
-        #     s.connect((B_addr, B_port))
-        #     s.send(json.dumps({'type': 'order',
-        #                        'task': 'B',
-        #                        'current position': self.current_pos,
-        #                        'PA address': (self.ip, self.port)}).encode())
-        # while not self.B_finish:
-        #     time.sleep(1)
-        # print('{} finish in {} secs'.format(self.name, time.time() - start_time))
+        print('{} ask for central controller plan'.format(self.name))
+
+        plan = self.wait_for_response('plan', 10)
+
+        for pos, ra_addr, ra_name in plan['path']:
+            self.send_msg(ra_addr, {'type': 'order',
+                                    'task': 'transport',
+                                    'start': self.current_pos,
+                                    'destination': pos,
+                                    'PA address': (self.ip, self.port),
+                                    'PA name': self.name
+                                    })
+            self.wait_for_finish(ra_name, 100)
+            self.current_pos = pos
+
+        # send control command to processing RA
+        ra_addr, ra_name = plan['processing machine']
+        self.send_msg(ra_addr, {'type': 'order',
+                                'task': self.tasks[0],
+                                'PA address': (self.ip, self.port),
+                                'PA name': self.name
+                                })
+
+        self.wait_for_finish(ra_name, 100)
+        print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
         self.sub.subscribe(self.interests)
 
     def run(self):
-        if self.type == 'rush order':
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
-                s.send(json.dumps({'type': 'switch to centralized request',
-                                   'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
-                                           (utils.IP['Node2'], utils.PORT['RA2']),
-                                           (utils.IP['Node3'], utils.PORT['RA3']),
-                                           (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
-                data = s.recv(1024)
-            msg = json.loads(data.decode())
-            if msg['type'] == 'agree to switch':
-                self.switch_to_centralized()
-                self.centralized_mode()
-            else:
-                self.distributed_mode()
-        elif self.type == 'normal order':
+        # if self.type == 'rush order':
+        #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        #         s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
+        #         s.send(json.dumps({'type': 'switch to centralized request',
+        #                            'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
+        #                                    (utils.IP['Node2'], utils.PORT['RA2']),
+        #                                    (utils.IP['Node3'], utils.PORT['RA3']),
+        #                                    (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
+        #         data = s.recv(1024)
+        #     msg = json.loads(data.decode())
+        #     if msg['type'] == 'agree to switch':
+        #         self.switch_to_centralized()
+        #         self.centralized_mode()
+        #     else:
+        #         self.distributed_mode()
+        # elif self.type == 'normal order':
+        #     self.distributed_mode()
+        if self.current_mode == 'centralized':
+            self.centralized_mode()
+        else:
             self.distributed_mode()
 
     def listen(self):
         def start_socket_listener():
-            while True:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.bind((self.ip, self.port))
-                    s.listen()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind((self.ip, self.port))
+                s.listen()
+                while True:
                     conn, addr = s.accept()
                     with conn:
                         while True:
@@ -259,8 +283,9 @@ if __name__ == "__main__":
     addr = args[1]
     port = int(args[2])
     config_file = args[3]
+    start_mode = args[4]
 
     f = open(config_file, )
     config = json.load(f)
     f.close()
-    ProductAgent(name, addr, port, config).start()
+    ProductAgent(name, addr, port, config, start_mode).start()

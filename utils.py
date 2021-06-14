@@ -3,12 +3,15 @@ IP = {
     'Node2': '192.168.1.2',
     'Node3': '192.168.1.3',
     'Node4': '192.168.1.4',
-    'pubsub': '192.168.1.100'
+    'pubsub': '127.0.0.1',
+    'coordinator': '127.0.0.1',
+    'central controller': '127.0.0.1'
 }
 
 PORT = {
     'pubsub': 6379,
-    'coordinator': 7000,
+    'coordinator': 5000,
+    'central controller': 9000,
     'PA start': 8000,
     'RA start': 7000
 }
