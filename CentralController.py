@@ -9,6 +9,23 @@ import socket
 import utils
 
 
+class Point(object):
+
+    def __init__(self, pos, capability=None):
+        self.position = pos
+        self.capability = capability
+        self.neighbors = []
+
+    def add_neighbor(self, point):
+        self.neighbors.append(point)
+
+    def __eq__(self, another):
+        return hasattr(another, 'position') and self.position == another.position
+
+    def __hash__(self):
+        return hash(self.position)
+
+
 class CentralController(Thread):
 
     def __init__(self, ip, port):
@@ -19,17 +36,112 @@ class CentralController(Thread):
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
-        self.interests = ['location', 'capability']
+        self.interests = ['location', 'capability', 'edges', 'velocity']
         self.sub.subscribe(self.interests)
 
-        self.pubsub_queue = []
+        self.knowledge = {}
         self.message_queue = []
         self.listen()
 
-    def optimize(self):
-        current_env = {}
-        print('current env: {}'.format(current_env))
-        # TODO shortest path
+    def run(self):
+        time.sleep(10)
+        self.optimize(Point((40, 52)), 's1')
+
+    def optimize(self, source, task):
+        current_env = self.knowledge.copy()
+        # print('current env: {}'.format(current_env))
+        # build graph
+        machine_map = {}
+        vertex = set()
+        velocity = {}
+        for ra_name in current_env['location'].keys():
+            if 'Machine' in ra_name:
+                pos = tuple(current_env['location'][ra_name])
+                cap = current_env['capability'][ra_name]
+                entrance = Point((-pos[0], -pos[1]), capability=cap)  # entrance is negative coordinate
+                exit = Point(pos, capability=cap)
+                vertex.add(entrance)
+                vertex.add(exit)
+                entrance.add_neighbor(exit)
+                machine_map[pos] = (entrance, exit)
+        ra_map = {}
+        for ra_name in current_env['location'].keys():
+            if 'Robot' in ra_name or 'Buffer' in ra_name:
+                edges = current_env['edges'][ra_name]
+                for begin, end in edges:
+                    begin, end = tuple(begin), tuple(end)
+                    if begin not in ra_map:
+                        begin_point = Point(begin)
+                        ra_map[begin] = begin_point
+                        vertex.add(begin_point)
+                    else:
+                        begin_point = ra_map[begin]
+                    if end not in ra_map:
+                        end_point = Point(end)
+                        ra_map[end] = end_point
+                        vertex.add(end_point)
+                    else:
+                        end_point = ra_map[end]
+
+                    if begin in machine_map:
+                        exit_point = machine_map[begin][1]
+                        exit_point.add_neighbor(end_point)
+                        velocity[(exit_point, end_point)] = current_env['velocity'][ra_name]
+                    elif end in machine_map:
+                        entrance_point = machine_map[end][0]
+                        begin_point.add_neighbor(entrance_point)
+                        velocity[(begin_point, entrance_point)] = current_env['velocity'][ra_name]
+                    else:
+                        begin_point.add_neighbor(end_point)
+                        velocity[(begin_point, end_point)] = current_env['velocity'][ra_name]
+
+        # shortest path
+        dist, prev = {}, {}
+        Q = set()
+        for v in vertex:
+            dist[v] = utils.INF
+            prev[v] = None
+            Q.add(v)
+
+        dist[source] = 0
+        destination = set()
+        while Q:
+            min_u = None
+            min_dist = utils.INF
+            # print([(x.position, dist[x]) for x in Q])
+            for u in Q:
+                if dist[u] < min_dist:
+                    min_dist = dist[u]
+                    min_u = u
+            if not min_u:
+                break
+            Q.remove(min_u)
+            for v in min_u.neighbors:
+                length = utils.INF
+                if v.position[0] == - (min_u.position[0]):  # machine processing edge
+                    if task in v.capability:
+                        length = v.capability[task]
+                        destination.add(v)
+                else:
+                    length = utils.distance(min_u.position, v.position) / velocity[(min_u, v)]
+                alt = dist[min_u] + length
+                if alt < dist[v]:
+                    dist[v] = alt
+                    prev[v] = min_u
+
+        target = None
+        min_dist = utils.INF
+        for x in destination:
+            if dist[x] < min_dist:
+                min_dist = dist[x]
+                target = x
+        print('here')
+        path = []
+        u = target
+        while u:
+            path.insert(0, u)
+            u = prev[u]
+        print([x.position for x in path])
 
     def send_msg(self, addr, msg):
         print(addr)
@@ -46,7 +158,10 @@ class CentralController(Thread):
                     # print('Recieved: {0}'.format(latency))
                     channel = m['channel']
                     msg = json.loads(m['data'])
-                    self.pubsub_queue.append((channel, msg))
+                    if channel not in self.knowledge:
+                        self.knowledge[channel] = {msg['RA name']: msg['content']}
+                    else:
+                        self.knowledge[channel][msg['RA name']] = msg['content']
 
         def start_socket_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

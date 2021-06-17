@@ -28,6 +28,7 @@ class ResourceAgent(Thread):
         self.sub.subscribe(self.tasks)
 
         self.current_mode = start_mode
+        self.data_publish_thread = None
 
         self.pubsub_queue = []
         self.message_queue = []
@@ -120,9 +121,11 @@ class ResourceAgent(Thread):
                                                    'content': self.data[d],
                                                    'RA name': self.name
                                                    }))
-                time.sleep(5)
-
-        # Thread(target=publish_data).start()
+                time.sleep(1)
+            time.sleep(5)
+        if not self.data_publish_thread:
+            self.data_publish_thread = Thread(target=publish_data)
+            self.data_publish_thread.start()
 
         while self.message_queue:
             msg = self.message_queue.pop(0)

@@ -29,3 +29,7 @@ MAC = {
 BID_CONFIRM_TIMEOUT = 5
 COMMAND_ORDER_TIMEOUT = 100000
 STD_ERR = 1
+INF = 1000000
+
+def distance(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
