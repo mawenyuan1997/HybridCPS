@@ -36,10 +36,11 @@ class CentralController(Thread):
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
-        self.interests = ['location', 'capability', 'edges', 'velocity']
+        self.interests = ['location', 'capability', 'edges', 'velocity', 'RA address']
         self.sub.subscribe(self.interests)
 
         self.knowledge = {}
+        self.optimized_plan = {}
         self.message_queue = []
         self.listen()
 
@@ -54,6 +55,7 @@ class CentralController(Thread):
         machine_map = {}
         vertex = set()
         velocity = {}
+        process_ra_info = {}
         for ra_name in current_env['location'].keys():
             if 'Machine' in ra_name:
                 pos = tuple(current_env['location'][ra_name])
@@ -63,6 +65,7 @@ class CentralController(Thread):
                 vertex.add(entrance)
                 vertex.add(exit)
                 entrance.add_neighbor(exit)
+                process_ra_info[(entrance, exit)] = (current_env['RA address'][ra_name], ra_name)
                 machine_map[pos] = (entrance, exit)
         ra_map = {}
         for ra_name in current_env['location'].keys():
@@ -87,13 +90,16 @@ class CentralController(Thread):
                         exit_point = machine_map[begin][1]
                         exit_point.add_neighbor(end_point)
                         velocity[(exit_point, end_point)] = current_env['velocity'][ra_name]
+                        process_ra_info[(exit_point, end_point)] = (current_env['RA address'][ra_name], ra_name)
                     elif end in machine_map:
                         entrance_point = machine_map[end][0]
                         begin_point.add_neighbor(entrance_point)
                         velocity[(begin_point, entrance_point)] = current_env['velocity'][ra_name]
+                        process_ra_info[(begin_point, entrance_point)] = (current_env['RA address'][ra_name], ra_name)
                     else:
                         begin_point.add_neighbor(end_point)
                         velocity[(begin_point, end_point)] = current_env['velocity'][ra_name]
+                        process_ra_info[(begin_point, end_point)] = (current_env['RA address'][ra_name], ra_name)
 
         # shortest path
         dist, prev = {}, {}
@@ -135,13 +141,22 @@ class CentralController(Thread):
             if dist[x] < min_dist:
                 min_dist = dist[x]
                 target = x
-        print('here')
         path = []
         u = target
         while u:
             path.insert(0, u)
             u = prev[u]
-        print([x.position for x in path])
+
+        complete_path = []
+        for i in range(1, len(path)):
+            ra_addr, ra_name = process_ra_info[(path[i-1], path[i])]
+            complete_path.append(((abs(path[i].position[0]), abs(path[i].position[1])), ra_addr, ra_name))
+        print(complete_path)
+        _, addr, name = complete_path[-1]
+        complete_path = complete_path[:-1]
+        self.optimized_plan[(source.position, task)] = {'type': 'plan',
+                                                        'path': complete_path,
+                                                        'processing machine': (addr, name)}
 
     def send_msg(self, addr, msg):
         print(addr)
@@ -177,16 +192,17 @@ class CentralController(Thread):
                             msg = json.loads(data.decode())
                             self.message_queue.append(msg)
                             if msg['type'] == 'plan request':
-                                print('CC receive plan request')
+                                print('CC receive plan request {}, {}'.format(msg['start'], msg['task']))
                                 pa_addr = msg['PA address']
-                                self.send_msg(pa_addr, {'type': 'plan',
-                                                        'path': [[[40, 68], ['127.0.0.1', 7034], 'RobotM12'],
-                                                                 [[40, 72], ['127.0.0.1', 7000], 'BufferB1'],
-                                                                 [[30, 100], ['127.0.0.1', 7028], 'RobotB1']
-                                                                 ],
-                                                        'processing machine': [['127.0.0.1', 7008], 'MachineA']
-                                                        })
-
+                                # sample response
+                                # {'type': 'plan',
+                                # 'path': [[[40, 68], ['127.0.0.1', 7034], 'RobotM12'],
+                                #          [[40, 72], ['127.0.0.1', 7000], 'BufferB1'],
+                                #          [[30, 100], ['127.0.0.1', 7028], 'RobotB1']
+                                #          ],
+                                # 'processing machine': [['127.0.0.1', 7008], 'MachineA']
+                                # }
+                                self.send_msg(pa_addr, self.optimized_plan[(tuple(msg['start']), msg['task'])])
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 

@@ -217,7 +217,10 @@ class ProductAgent(Thread):
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
-        self.sub.subscribe(self.interests)
+        self.centralized_mode()
+
+    def switch_to_distributed(self):
+        self.distributed_mode()
 
     def run(self):
         # if self.type == 'rush order':

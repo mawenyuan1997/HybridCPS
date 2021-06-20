@@ -12,10 +12,10 @@ import os
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, addr, port, tasks, data, start_mode):
+    def __init__(self, name, ip, port, tasks, data, start_mode):
         super().__init__()
         self.name = name
-        self.ip = addr
+        self.ip = ip
         self.port = port
         self.tasks = tasks
         self.data = data
@@ -92,6 +92,11 @@ class ResourceAgent(Thread):
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks.keys())
         self.current_mode = 'centralized'
+
+    def switch_to_distributed(self):
+        self.sub.unsubscribe(self.data.keys())
+        self.data_publish_thread.exit()
+        self.current_mode = 'distributed'
 
     def distributed_mode(self):
         # print('{} start to run distributed mode'.format(self.name))
@@ -179,7 +184,7 @@ class ResourceAgent(Thread):
 if __name__ == "__main__":
     args = sys.argv[1:]
     name = args[0]
-    addr, port = args[1], int(args[2])
+    ip, port = args[1], int(args[2])
     config_file = args[3]
     start_mode = args[4]
 
@@ -202,5 +207,5 @@ if __name__ == "__main__":
                     edges.append((q, p))
                     edges.append((p, q))
         data['edges'] = edges
-
-    ResourceAgent(name, addr, port, tasks, data, start_mode).start()
+    data['RA address'] = (ip, port)
+    ResourceAgent(name, ip, port, tasks, data, start_mode).start()
