@@ -7,6 +7,9 @@ from threading import Thread
 import socket
 
 # TODO
+import utils
+
+
 class Coordinator(Thread):
 
     def __init__(self, addr, port):
@@ -26,14 +29,17 @@ class Coordinator(Thread):
                         if not data:
                             break
                         msg = json.loads(data.decode())
-                        if msg['type'] == 'switch to centralized request':
-                            conn.send(json.dumps({'type': 'agree to switch'}).encode())
-                            for ra_addr, ra_port in msg['RAs']:
+                        if msg['type'] == 'need switch':
+                            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
+                                ss.connect(('127.0.0.1', utils.PORT['PA start']))
+                                ss.send(json.dumps({'type': 'switch request'}).encode())
+                            for port in range(7000, 7037):
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
-                                    ss.connect((ra_addr, ra_port))
-                                    ss.send(json.dumps({'type': 'switch to centralized request'}).encode())
+                                    ss.connect(('127.0.0.1', port))
+                                    ss.send(json.dumps({'type': 'switch request'}).encode())
 
         Thread(target=start_listener).start()
+
 
 
 if __name__ == "__main__":

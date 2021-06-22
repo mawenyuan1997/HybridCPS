@@ -16,6 +16,7 @@ class ProductAgent(Thread):
         self.ip = ip
         self.port = port
         self.tasks = config['tasks']
+        self.next_task_index = 0
         self.interests = config['interests']
         self.current_mode = start_mode
         self.knowledge = {}
@@ -28,6 +29,7 @@ class ProductAgent(Thread):
         self.pubsub_queue = []
         self.message_queue = []
         self.ack_received = False
+        self.need_switch = False
         self.sub.subscribe(self.tasks)
         self.sub.subscribe("transport")  # PA needs transport tasks in addition to processing tasks
         self.listen_thread = None
@@ -88,11 +90,12 @@ class ProductAgent(Thread):
                     path.pop(-1)
 
         path = []
+        print(self.current_pos)
         dfs(self.current_pos, path)
         if not path:
             print('no path found')
         else:
-            print([x[1] for x in path])
+            print('find path {}'.format([x[1] for x in path]))
         return path
 
     def confirm_bid(self, task, ra_name, task_info=None):
@@ -127,7 +130,12 @@ class ProductAgent(Thread):
     def distributed_mode(self):
         print('{} run in distributed mode'.format(self.name))
         start_time = time.time()
-        for task in self.tasks:
+        while self.next_task_index < len(self.tasks):
+            task = self.tasks[self.next_task_index]
+            # check if needs to switch mode
+            if self.need_switch:
+                self.switch_to_centralized()
+                return
             # find a bidder for task
             bids = []
             while not bids:
@@ -154,7 +162,9 @@ class ProductAgent(Thread):
                                                   'PA address': (self.ip, self.port),
                                                   'PA name': self.name
                                                   })
-                self.wait_for_finish(bid['RA name'], (self.distance(self.current_pos, pos) / bid['velocity']))
+                if_finished = self.wait_for_finish(bid['RA name'],
+                                                   (self.distance(self.current_pos, pos) / bid['velocity']))
+                # TODO handle timeout
                 self.current_pos = pos
 
             # send control command to processing RA
@@ -164,8 +174,11 @@ class ProductAgent(Thread):
                                                    'PA name': self.name
                                                    })
 
-            self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
+            if_finished = self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
+            # TODO handle timeout
             self.current_pos = tuple(best_bid['RA location'])
+            self.next_task_index += 1
+
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
     def wait_for_response(self, msg_type, timeout):
@@ -183,43 +196,59 @@ class ProductAgent(Thread):
     def centralized_mode(self):
         print('{} run in centralized mode'.format(self.name))
         start_time = time.time()
-        msg = {'type': 'plan request',
-               'start': self.current_pos,
-               'task': self.tasks[0],
-               'PA address': (self.ip, self.port)}
-        self.send_msg((utils.IP['central controller'], utils.PORT['central controller']), msg)
+        while self.next_task_index < len(self.tasks):
+            task = self.tasks[self.next_task_index]
+            # check if needs to switch mode
+            if self.need_switch:
+                self.switch_to_distributed()
+                return
+            msg = {'type': 'plan request',
+                   'start': self.current_pos,
+                   'task': task,
+                   'PA address': (self.ip, self.port)}
+            self.send_msg((utils.IP['central controller'], utils.PORT['central controller']), msg)
 
-        print('{} ask for central controller plan'.format(self.name))
+            print('{} ask for central controller plan'.format(self.name))
 
-        plan = self.wait_for_response('plan', 10)
+            plan = self.wait_for_response('plan', 10)
+            print('{} get plan {}'.format(self.name, plan))
 
-        for pos, ra_addr, ra_name in plan['path']:
+            for pos, ra_addr, ra_name in plan['path']:
+                self.send_msg(ra_addr, {'type': 'order',
+                                        'task': 'transport',
+                                        'start': self.current_pos,
+                                        'destination': pos,
+                                        'PA address': (self.ip, self.port),
+                                        'PA name': self.name
+                                        })
+                self.wait_for_finish(ra_name, 100)
+                self.current_pos = tuple(pos)
+
+            # send control command to processing RA
+            ra_addr, ra_name = plan['processing machine']
             self.send_msg(ra_addr, {'type': 'order',
-                                    'task': 'transport',
-                                    'start': self.current_pos,
-                                    'destination': pos,
+                                    'task': self.tasks[0],
                                     'PA address': (self.ip, self.port),
                                     'PA name': self.name
                                     })
+
             self.wait_for_finish(ra_name, 100)
-            self.current_pos = pos
+            self.next_task_index += 1
 
-        # send control command to processing RA
-        ra_addr, ra_name = plan['processing machine']
-        self.send_msg(ra_addr, {'type': 'order',
-                                'task': self.tasks[0],
-                                'PA address': (self.ip, self.port),
-                                'PA name': self.name
-                                })
-
-        self.wait_for_finish(ra_name, 100)
+            # suppose task 1 need distributed mode
+            if self.next_task_index == 1:
+                print('PA send switch request')
+                self.send_msg((utils.IP['coordinator'], utils.PORT['coordinator']), {'type': 'need switch'})
+                time.sleep(3)
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
     def switch_to_centralized(self):
         self.sub.unsubscribe(self.tasks)
+        self.need_switch = False
         self.centralized_mode()
 
     def switch_to_distributed(self):
+        self.need_switch = False
         self.distributed_mode()
 
     def run(self):
@@ -259,6 +288,8 @@ class ProductAgent(Thread):
                                 break
                             msg = json.loads(data.decode())
                             self.message_queue.append(msg)
+                            if msg['type'] == 'switch request':
+                                self.need_switch = True
 
         def start_pubsub_listener():
             for m in self.sub.listen():

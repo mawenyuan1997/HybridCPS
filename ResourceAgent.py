@@ -25,17 +25,20 @@ class ResourceAgent(Thread):
             decode_responses=True, encoding='utf-8'))
 
         self.sub = self.client.pubsub()
-        self.sub.subscribe(self.tasks)
-
         self.current_mode = start_mode
+        if self.current_mode == 'centralized':
+            self.need_publish_data = True
+        else:
+            self.need_publish_data = False
+            self.sub.subscribe(self.tasks)
         self.data_publish_thread = None
-
+        self.need_switch = False
         self.pubsub_queue = []
         self.message_queue = []
         self.listen()
 
     def wait_for_task(self):
-        print('{} wait for task'.format(self.name))
+        # print('{} wait for task'.format(self.name))
         while True:
             while self.pubsub_queue:
                 channel, msg = self.pubsub_queue.pop(0)
@@ -77,7 +80,7 @@ class ResourceAgent(Thread):
             return (self.distance(self.data['location'], order_msg['start'])
                     + self.distance(order_msg['start'], order_msg['destination'])) / self.data['velocity']
         else:
-            return self.data['capability'][task]
+            return self.data['capability'][task] / 10   # TODO remove /10
 
     def execute_task_and_ack(self, task, pa_addr, duration):
         print('{} wait for {}'.format(self.name, duration))
@@ -88,15 +91,6 @@ class ResourceAgent(Thread):
                                'task': task,
                                'RA name': self.name
                                }).encode())
-
-    def switch_to_centralized(self):
-        self.sub.unsubscribe(self.tasks.keys())
-        self.current_mode = 'centralized'
-
-    def switch_to_distributed(self):
-        self.sub.unsubscribe(self.data.keys())
-        self.data_publish_thread.exit()
-        self.current_mode = 'distributed'
 
     def distributed_mode(self):
         # print('{} start to run distributed mode'.format(self.name))
@@ -120,14 +114,15 @@ class ResourceAgent(Thread):
 
     def centralized_mode(self):
         def publish_data():
-            for d in self.data.keys():
-                now = time.time()
-                self.client.publish(d, json.dumps({'time': now,
-                                                   'content': self.data[d],
-                                                   'RA name': self.name
-                                                   }))
-                time.sleep(1)
-            time.sleep(5)
+            while self.need_publish_data:
+                for d in self.data.keys():
+                    now = time.time()
+                    self.client.publish(d, json.dumps({'time': now,
+                                                       'content': self.data[d],
+                                                       'RA name': self.name
+                                                       }))
+                    time.sleep(1)
+                time.sleep(5)
         if not self.data_publish_thread:
             self.data_publish_thread = Thread(target=publish_data)
             self.data_publish_thread.start()
@@ -143,22 +138,31 @@ class ResourceAgent(Thread):
 
     def run(self):
         while True:
-            # print('{} current mode: {}'.format(self.name, self.current_mode))
-            while self.current_mode == 'distributed':
+            if self.current_mode == 'distributed':
                 self.distributed_mode()
-            # print('{} current mode: {}'.format(self.name, self.current_mode))
-            while self.current_mode == 'centralized':
+            else:
                 self.centralized_mode()
+            if self.need_switch:
+                if self.current_mode == 'distributed':
+                    self.current_mode = 'centralized'
+                    self.sub.unsubscribe(self.tasks)
+                    self.need_publish_data = True
+                else:
+                    self.current_mode = 'distributed'
+                    self.sub.subscribe(self.tasks)
+                    self.need_publish_data = False
+                self.need_switch = False
 
     def listen(self):
         def start_pubsub_listener():
-            for m in self.sub.listen():
-                if m.get("type") == "message":
-                    # latency = time.time() - float(m['data'])
-                    # print('Recieved: {0}'.format(latency))
-                    channel = m['channel']
-                    msg = json.loads(m['data'])
-                    self.pubsub_queue.append((channel, msg))
+            while True:
+                for m in self.sub.listen():
+                    if m.get("type") == "message":
+                        # latency = time.time() - float(m['data'])
+                        # print('Recieved: {0}'.format(latency))
+                        channel = m['channel']
+                        msg = json.loads(m['data'])
+                        self.pubsub_queue.append((channel, msg))
 
         def start_socket_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -172,10 +176,11 @@ class ResourceAgent(Thread):
                             if not data:
                                 break
                             msg = json.loads(data.decode())
-                            self.message_queue.append(msg)
-                            if msg['type'] == 'switch to centralized request':
-                                print('{} receive switch request'.format(self.name))
-                                self.switch_to_centralized()
+
+                            if msg['type'] == 'switch request':
+                                self.need_switch = True
+                            else:
+                                self.message_queue.append(msg)
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()

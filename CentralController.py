@@ -36,7 +36,7 @@ class CentralController(Thread):
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
             decode_responses=True, encoding='utf-8'))
         self.sub = self.client.pubsub()
-        self.interests = ['location', 'capability', 'edges', 'velocity', 'RA address']
+        self.interests = ['location', 'capability', 'edges', 'velocity', 'RA address', 'unloading point']
         self.sub.subscribe(self.interests)
 
         self.knowledge = {}
@@ -45,11 +45,14 @@ class CentralController(Thread):
         self.listen()
 
     def run(self):
-        time.sleep(10)
-        self.optimize(Point((40, 52)), 's1')
-
-    def optimize(self, source, task):
+        time.sleep(8)
         current_env = self.knowledge.copy()
+        for ra_name, points in current_env['unloading point'].items():
+            for pos in points:
+                for task in ['s1', 's2', 's3', 's4', 's5', 's6']:
+                    self.optimize(Point(tuple(pos)), task, current_env)
+
+    def optimize(self, source, task, current_env):
         # print('current env: {}'.format(current_env))
         # build graph
         machine_map = {}
@@ -114,7 +117,6 @@ class CentralController(Thread):
         while Q:
             min_u = None
             min_dist = utils.INF
-            # print([(x.position, dist[x]) for x in Q])
             for u in Q:
                 if dist[u] < min_dist:
                     min_dist = dist[u]
@@ -151,7 +153,9 @@ class CentralController(Thread):
         for i in range(1, len(path)):
             ra_addr, ra_name = process_ra_info[(path[i-1], path[i])]
             complete_path.append(((abs(path[i].position[0]), abs(path[i].position[1])), ra_addr, ra_name))
-        print(complete_path)
+        # print(source.position, task, complete_path)
+        if not complete_path:    # no path or no need to move
+            return
         _, addr, name = complete_path[-1]
         complete_path = complete_path[:-1]
         self.optimized_plan[(source.position, task)] = {'type': 'plan',
@@ -159,7 +163,6 @@ class CentralController(Thread):
                                                         'processing machine': (addr, name)}
 
     def send_msg(self, addr, msg):
-        print(addr)
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             ip, port = addr
             s.connect((ip, port))

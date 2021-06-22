@@ -4,7 +4,7 @@ import utils
 import time
 
 if __name__ == "__main__":
-    os.system('python3 Coordinator.py {} {} &'.format(utils.IP['coordinator'], utils.PORT['coordinator']))
+
     os.system('python3 CentralController.py {} {} &'.format(utils.IP['central controller'],
                                                             utils.PORT['central controller']))
     n = 0
@@ -18,6 +18,7 @@ if __name__ == "__main__":
                                                                      config_dir + config_file,
                                                                      'centralized'))
         n += 1
+    os.system('python3 Coordinator.py {} {} &'.format(utils.IP['coordinator'], utils.PORT['coordinator']))
     time.sleep(12)
     config_dir = 'SemiconductorMfg/PAconfig/'
     os.system('python3 ProductAgent.py {} {} {} {} {} &'.format("PA1",
