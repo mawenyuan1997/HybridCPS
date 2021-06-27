@@ -12,13 +12,14 @@ import os
 
 class ResourceAgent(Thread):
 
-    def __init__(self, name, ip, port, tasks, data, start_mode):
+    def __init__(self, name, ip, port, tasks, data, start_mode, resource_addr):
         super().__init__()
         self.name = name
         self.ip = ip
         self.port = port
         self.tasks = tasks
         self.data = data
+        self.resource_addr = resource_addr
 
         self.client = redis.client.StrictRedis(connection_pool=redis.ConnectionPool(
             host=utils.IP['pubsub'], port=utils.PORT['pubsub'],
@@ -36,6 +37,7 @@ class ResourceAgent(Thread):
         self.pubsub_queue = []
         self.message_queue = []
         self.listen()
+        Thread(target=self.get_data).start()
 
     def wait_for_task(self):
         # print('{} wait for task'.format(self.name))
@@ -176,7 +178,7 @@ class ResourceAgent(Thread):
                             if not data:
                                 break
                             msg = json.loads(data.decode())
-
+                            print(msg)
                             if msg['type'] == 'switch request':
                                 self.need_switch = True
                             else:
@@ -184,6 +186,17 @@ class ResourceAgent(Thread):
 
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
+
+    def get_data(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((self.resource_addr[0], self.resource_addr[1]))
+            while True:
+                s.send(json.dumps({'type': 'data request'
+                                   }).encode()+b'\n')
+                data = s.recv(1024)
+                msg = json.loads(data.decode()[:-1])
+                print(msg)
+                time.sleep(3)
 
 
 if __name__ == "__main__":
@@ -209,8 +222,8 @@ if __name__ == "__main__":
         for p in data['unloading point']:
             for q in data['unloading point']:
                 if p != q:
-                    edges.append((q, p))
                     edges.append((p, q))
         data['edges'] = edges
     data['RA address'] = (ip, port)
-    ResourceAgent(name, ip, port, tasks, data, start_mode).start()
+    resource_addr = config['resource address']
+    ResourceAgent(name, ip, port, tasks, data, start_mode, resource_addr).start()

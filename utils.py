@@ -10,7 +10,7 @@ IP = {
 
 PORT = {
     'pubsub': 6379,
-    'coordinator': 5000,
+    'coordinator': 4000,
     'central controller': 9000,
     'PA start': 8000,
     'RA start': 7000

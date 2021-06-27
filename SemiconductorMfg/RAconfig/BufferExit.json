@@ -1,0 +1,12 @@
+{
+  "tasks": [
+    "transport"
+  ],
+  "data": {
+    "location": [140, 60],
+    "unloading point": [[142, 60], [140, 60]],
+    "parts in storage": [],
+    "velocity": 2
+  },
+  "resource address": ["127.0.0.1", 5021]
+}

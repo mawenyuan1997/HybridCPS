@@ -7,5 +7,6 @@
     "unloading point": [[40, 52], [40, 48]],
     "parts in storage": [],
     "velocity": 2
-  }
+  },
+  "resource address": ["127.0.0.1", 5025]
 }
