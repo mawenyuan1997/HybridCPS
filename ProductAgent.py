@@ -227,7 +227,7 @@ class ProductAgent(Thread):
             # send control command to processing RA
             ra_addr, ra_name = plan['processing machine']
             self.send_msg(ra_addr, {'type': 'order',
-                                    'task': self.tasks[0],
+                                    'task': self.tasks[self.next_task_index],
                                     'PA address': (self.ip, self.port),
                                     'PA name': self.name
                                     })
@@ -236,10 +236,10 @@ class ProductAgent(Thread):
             self.next_task_index += 1
 
             # suppose task 1 need distributed mode
-            if self.next_task_index == 1:
-                print('PA send switch request')
-                self.send_msg((utils.IP['coordinator'], utils.PORT['coordinator']), {'type': 'need switch'})
-                time.sleep(3)
+            # if self.next_task_index == 1:
+            #     print('PA send switch request')
+            #     self.send_msg((utils.IP['coordinator'], utils.PORT['coordinator']), {'type': 'need switch'})
+            #     time.sleep(3)
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
     def switch_to_centralized(self):

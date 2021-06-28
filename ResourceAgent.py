@@ -82,13 +82,19 @@ class ResourceAgent(Thread):
             return (self.distance(self.data['location'], order_msg['start'])
                     + self.distance(order_msg['start'], order_msg['destination'])) / self.data['velocity']
         else:
-            return self.data['capability'][task] / 10   # TODO remove /10
+            return self.data['capability'][task]
 
-    def execute_task_and_ack(self, task, pa_addr, duration):
+    def execute_task_and_ack(self, task, msg, duration):
         print('{} wait for {}'.format(self.name, duration))
-        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))
+        # send order command to resource
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((pa_addr[0], pa_addr[1]))
+            s.connect((self.resource_addr[0], self.resource_addr[1]))
+            s.send(json.dumps(msg).encode()+b'\n')
+
+        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((msg['PA address'][0], msg['PA address'][1]))
             s.send(json.dumps({'type': 'finish ack',
                                'task': task,
                                'RA name': self.name
@@ -107,7 +113,7 @@ class ResourceAgent(Thread):
                     msg = self.message_queue.pop(0)
                     if msg['type'] == 'order' and msg['PA name'] == pa_name:
                         duration = self.get_duration(task, msg)
-                        self.execute_task_and_ack(task, msg['PA address'], duration)
+                        self.execute_task_and_ack(task, msg, duration)
                         break
                     else:
                         self.message_queue.append(msg)
@@ -133,7 +139,7 @@ class ResourceAgent(Thread):
             msg = self.message_queue.pop(0)
             if msg['type'] == 'order':
                 duration = self.get_duration(msg['task'], msg)
-                self.execute_task_and_ack(msg['task'], msg['PA address'], duration)
+                self.execute_task_and_ack(msg['task'], msg, duration)
                 break
             else:
                 self.message_queue.append(msg)
@@ -195,7 +201,6 @@ class ResourceAgent(Thread):
                                    }).encode()+b'\n')
                 data = s.recv(1024)
                 msg = json.loads(data.decode()[:-1])
-                print(msg)
                 time.sleep(3)
 
 

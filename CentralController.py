@@ -45,7 +45,7 @@ class CentralController(Thread):
         self.listen()
 
     def run(self):
-        time.sleep(8)
+        time.sleep(10)
         current_env = self.knowledge.copy()
         for ra_name, points in current_env['unloading point'].items():
             for pos in points:
@@ -155,7 +155,7 @@ class CentralController(Thread):
             complete_path.append(((abs(path[i].position[0]), abs(path[i].position[1])), ra_addr, ra_name))
         # print(source.position, task, complete_path)
         if not complete_path:    # no path or no need to move
-            return
+            return               # TODO bug here when no need to move
         _, addr, name = complete_path[-1]
         complete_path = complete_path[:-1]
         self.optimized_plan[(source.position, task)] = {'type': 'plan',
