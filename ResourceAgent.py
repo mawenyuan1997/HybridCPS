@@ -46,6 +46,7 @@ class ResourceAgent(Thread):
                 channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'announcement':
                     return channel, msg['PA name']
+                self.pubsub_queue.append((channel, msg))
             time.sleep(1)
 
     def send_bid(self, task):
@@ -65,13 +66,16 @@ class ResourceAgent(Thread):
     def wait_for_confirm(self, task, pa_name):
         start = time.time()
         while time.time() - start < utils.BID_CONFIRM_TIMEOUT:
-            while self.pubsub_queue:
+            while self.pubsub_queue and time.time() - start < utils.BID_CONFIRM_TIMEOUT:
                 channel, msg = self.pubsub_queue.pop(0)
-                if msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == pa_name:
-                    if msg['RA name'] == self.name:
-                        print('{} receive task {} confirm from {}'.format(self.name, task, pa_name))
-                        return True
-        # print('{} timeout wait for confirm'.format(self.name))  # TODO: add reject
+                if (msg['type'] == 'bid confirm' and channel == task and msg['PA name'] == pa_name
+                        and msg['RA name'] == self.name):
+                    print('{} receive task {} confirm from {}'.format(self.name, task, pa_name))
+                    return True
+                else:
+                    self.pubsub_queue.append((channel, msg))
+
+        # print('{} timeout wait for confirm'.format(self.name))  # TODO: add PA sending reject msg maybe
         return False
 
     def distance(self, a, b):

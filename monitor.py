@@ -6,7 +6,6 @@ import json
 from threading import Thread
 import socket
 
-# TODO
 import utils
 
 

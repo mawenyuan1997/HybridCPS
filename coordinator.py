@@ -7,7 +7,6 @@ import json
 from threading import Thread
 import socket
 
-# TODO
 import utils
 from utils import send_msg
 
@@ -38,7 +37,7 @@ class Coordinator(Thread):
                     msg = json.loads(m['data'])
                     # self.pubsub_queue.append((channel, msg))
                     if channel == 'dispatching' and msg['type'] == 'need switch':  # from agents
-                        # TODO decide switch
+                        # TODO decide whether and who to switch
                         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
                             ss.connect(('127.0.0.1', utils.PORT['PA start']))
                             ss.send(json.dumps({'type': 'switch request'}).encode())
@@ -78,7 +77,7 @@ class Coordinator(Thread):
                                                                                                utils.PORT[
                                                                                                    'PA start'] + self.pa_num,
                                                                                                msg['config file'],
-                                                                                               'centralized',
+                                                                                               'distributed',
                                                                                                'distributed'))
                                 self.pa_num += 1
                             elif msg['type'] == 'new resource':
@@ -88,7 +87,7 @@ class Coordinator(Thread):
                                                                                              utils.PORT[
                                                                                                  'RA start'] + self.ra_num,
                                                                                              msg['config file'],
-                                                                                             'centralized'))
+                                                                                             'distributed'))
                                 self.ra_num += 1
 
         Thread(target=start_listener).start()

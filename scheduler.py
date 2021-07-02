@@ -47,6 +47,10 @@ class Scheduler(Thread):
     def run(self):
         time.sleep(13)
         current_env = self.knowledge.copy()
+        while not current_env:
+            time.sleep(1)
+            current_env = self.knowledge.copy()
+
         for ra_name, points in current_env['unloading point'].items():
             for pos in points:
                 for task in ['s1', 's2', 's3', 's4', 's5', 's6']:

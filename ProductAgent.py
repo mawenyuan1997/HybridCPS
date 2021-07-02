@@ -45,12 +45,12 @@ class ProductAgent(Thread):
                                               'current position': self.current_pos
                                               }))
 
-    def wait_for_bid(self, task):
+    def wait_for_bid(self, task, timeout=3):
         # print('{} wait for {}\'s bid'.format(self.name, task))
         start = time.time()
         bids = []
-        while time.time() - start < 3:
-            while self.pubsub_queue and time.time() - start < 3:
+        while time.time() - start < timeout:
+            while self.pubsub_queue and time.time() - start < timeout:
                 channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'bid' and channel == task:
                     bids.append(msg.copy())
@@ -111,11 +111,11 @@ class ProductAgent(Thread):
                                               }))
 
     # wait for RA's finish ack
-    def wait_for_finish(self, ra_name, finish_time):
+    def wait_for_finish(self, ra_name, finish_time, timeout=10):
         print('{} wait ra {} finish'.format(self.name, ra_name))
         start = time.time()
-        while time.time() - start < finish_time + 10:
-            while self.message_queue:
+        while time.time() - start < finish_time + timeout:
+            while self.message_queue and time.time() - start < finish_time + timeout:
                 msg = self.message_queue.pop(0)
                 if msg['type'] == 'finish ack' and msg['RA name'] == ra_name:
                     print('{} gets finish ack'.format(self.name))
@@ -181,7 +181,7 @@ class ProductAgent(Thread):
     def wait_for_response(self, channel, msg_type, timeout):
         start = time.time()
         while time.time() - start < timeout:
-            while self.pubsub_queue:
+            while self.pubsub_queue and time.time() - start < timeout:
                 ch, msg = self.pubsub_queue.pop(0)
                 if ch == channel and msg['type'] == msg_type:
                     print('{} gets {}'.format(self.name, msg_type))
