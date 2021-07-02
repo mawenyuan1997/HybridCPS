@@ -7,6 +7,7 @@ from threading import Thread
 import socket
 import utils
 from utils import send_msg
+from utils import distance
 
 
 class ProductAgent(Thread):
@@ -36,6 +37,7 @@ class ProductAgent(Thread):
         self.listen_thread = None
         self.listen()
 
+    # for distributed mode
     def announce_task(self, task):
         print('{} announce task {}'.format(self.name, task))
         now = time.time()
@@ -45,6 +47,7 @@ class ProductAgent(Thread):
                                               'current position': self.current_pos
                                               }))
 
+    # for distributed mode
     def wait_for_bid(self, task, timeout=3):
         # print('{} wait for {}\'s bid'.format(self.name, task))
         start = time.time()
@@ -58,21 +61,18 @@ class ProductAgent(Thread):
                     self.pubsub_queue.append((channel, msg))
         return bids
 
-    def distance(self, a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-    # return the name of the closest resource
+    # for distributed mode, return the name of the closest resource
     def find_best_bid(self, bids):
         dist = 100000
         best = None
         for bid in bids:
-            if self.distance(bid['RA location'], self.current_pos) < dist:
-                dist = self.distance(bid['RA location'], self.current_pos)
+            if distance(bid['RA location'], self.current_pos) < dist:
+                dist = distance(bid['RA location'], self.current_pos)
                 best = dict(bid)
         print('{} go to {}'.format(self.name, best['RA location']))
         return best
 
-    # find the shortest path towards a resource
+    # for distributed mode, find the shortest path towards a resource
     def find_path(self, bids, dest):
         edges = []
         for bid in bids:
@@ -101,6 +101,7 @@ class ProductAgent(Thread):
             print('find path {}'.format([x[1] for x in path]))
         return path
 
+    # for distributed mode
     def confirm_bid(self, task, ra_name, task_info=None):
         # print('{} confirm bid {}'.format(self.name, task))
         now = time.time()
@@ -160,7 +161,7 @@ class ProductAgent(Thread):
                                              'PA name': self.name
                                              })
                 if_finished = self.wait_for_finish(bid['RA name'],
-                                                   (self.distance(self.current_pos, pos) / bid['velocity']))
+                                                   (distance(self.current_pos, pos) / bid['velocity']))
                 # TODO handle timeout
                 self.current_pos = pos
 

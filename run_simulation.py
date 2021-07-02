@@ -5,12 +5,13 @@ from utils import send_msg
 import time
 
 if __name__ == "__main__":
-
-    os.system('python3 scheduler.py {} {} &'.format(utils.IP['scheduler'],
-                                                            utils.PORT['scheduler']))
+    # start central control
+    os.system('python3 scheduler.py {} {} &'.format(utils.IP['scheduler'], utils.PORT['scheduler']))
     os.system('python3 coordinator.py {} {} &'.format(utils.IP['coordinator'], utils.PORT['coordinator']))
     os.system('python3 monitor.py {} {} &'.format(utils.IP['monitor'], utils.PORT['monitor']))
     time.sleep(3)
+
+    # inform coordination module of resources and product order
     config_dir = 'SemiconductorMfg/RAconfig/'
     for config_file in sorted(os.listdir(config_dir)):
         ra_name = config_file.split('.')[0]

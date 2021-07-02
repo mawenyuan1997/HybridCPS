@@ -61,6 +61,7 @@ class Coordinator(Thread):
                                 break
                             msg = json.loads(data.decode())
                             if msg['type'] == 'switch advice':  # from monitor
+                                # TODO decide whether and who to switch
                                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
                                     ss.connect(('127.0.0.1', utils.PORT['PA start']))
                                     ss.send(json.dumps({'type': 'switch request'}).encode())
@@ -69,6 +70,7 @@ class Coordinator(Thread):
                                         ss.connect(('127.0.0.1', port))
                                         ss.send(json.dumps({'type': 'switch request'}).encode())
                             elif msg['type'] == 'plan':
+                                # TODO add centralized dispatching
                                 self.client.publish('dispatching', json.dumps(msg))
                             elif msg['type'] == 'new product':
                                 self.agent_status[msg['PA name']] = ('centralized', 'centralized')

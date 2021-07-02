@@ -7,7 +7,7 @@ from threading import Thread
 import socket
 
 import utils
-
+from utils import send_msg
 
 class Point(object):
 
@@ -51,11 +51,14 @@ class Scheduler(Thread):
             time.sleep(1)
             current_env = self.knowledge.copy()
 
+        # find optimal path for every (source, task) pair
         for ra_name, points in current_env['unloading point'].items():
             for pos in points:
                 for task in ['s1', 's2', 's3', 's4', 's5', 's6']:
                     self.optimize(Point(tuple(pos)), task, current_env)
 
+    # use Dijkstra to compute shortest path that will finish specific task starting from source
+    # To represent processing time, add an artificial point (entrance) and an edge
     def optimize(self, source, task, current_env):
         # print('current env: {}'.format(current_env))
         # build graph
@@ -167,12 +170,6 @@ class Scheduler(Thread):
                                                         'path': complete_path,
                                                         'processing machine': (addr, name)}
 
-    def send_msg(self, addr, msg):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            ip, port = addr
-            s.connect((ip, port))
-            s.send(json.dumps(msg).encode())
-
     def listen(self):
         def start_pubsub_listener():
             for m in self.sub.listen():
@@ -210,7 +207,7 @@ class Scheduler(Thread):
                                 #          ],
                                 # 'processing machine': [['127.0.0.1', 7008], 'MachineA']
                                 # }
-                                self.send_msg(coord_addr, self.optimized_plan[(tuple(msg['start']), msg['task'])])
+                                send_msg(coord_addr, self.optimized_plan[(tuple(msg['start']), msg['task'])])
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 

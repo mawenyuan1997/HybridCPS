@@ -7,6 +7,7 @@ from threading import Thread
 import sys
 import socket
 import utils
+from utils import distance
 import os
 
 
@@ -39,6 +40,7 @@ class ResourceAgent(Thread):
         self.listen()
         Thread(target=self.get_data).start()
 
+    # for distributed mode
     def wait_for_task(self):
         # print('{} wait for task'.format(self.name))
         while True:
@@ -49,6 +51,7 @@ class ResourceAgent(Thread):
                 self.pubsub_queue.append((channel, msg))
             time.sleep(1)
 
+    # for distributed mode
     def send_bid(self, task):
         # print('{} send bid to task {}'.format(self.name, task))
         bid = {'type': 'bid',
@@ -63,6 +66,7 @@ class ResourceAgent(Thread):
             bid['processing time'] = self.data['capability'][task]
         self.client.publish(task, json.dumps(bid))
 
+    # for distributed mode
     def wait_for_confirm(self, task, pa_name):
         start = time.time()
         while time.time() - start < utils.BID_CONFIRM_TIMEOUT:
@@ -78,13 +82,10 @@ class ResourceAgent(Thread):
         # print('{} timeout wait for confirm'.format(self.name))  # TODO: add PA sending reject msg maybe
         return False
 
-    def distance(self, a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
     def get_duration(self, task, order_msg):
         if order_msg['task'] == 'transport':
-            return (self.distance(self.data['location'], order_msg['start'])
-                    + self.distance(order_msg['start'], order_msg['destination'])) / self.data['velocity']
+            return (distance(self.data['location'], order_msg['start'])
+                    + distance(order_msg['start'], order_msg['destination'])) / self.data['velocity']
         else:
             return self.data['capability'][task]
 
@@ -95,7 +96,7 @@ class ResourceAgent(Thread):
             s.connect((self.resource_addr[0], self.resource_addr[1]))
             s.send(json.dumps(msg).encode()+b'\n')
 
-        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))
+        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))   # delay some time to simulate machine processing
 
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((msg['PA address'][0], msg['PA address'][1]))
@@ -197,7 +198,8 @@ class ResourceAgent(Thread):
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 
-    def get_data(self):
+    # obtain data from the resource
+    def get_data(self, period=3):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.resource_addr[0], self.resource_addr[1]))
             while True:
@@ -205,7 +207,8 @@ class ResourceAgent(Thread):
                                    }).encode()+b'\n')
                 data = s.recv(1024)
                 msg = json.loads(data.decode()[:-1])
-                time.sleep(3)
+                # TODO update resource data
+                time.sleep(period)
 
 
 if __name__ == "__main__":

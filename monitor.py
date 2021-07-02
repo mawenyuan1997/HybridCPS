@@ -9,6 +9,7 @@ import socket
 import utils
 
 
+# TODO add sending switching advice based on performance
 class Monitor(Thread):
 
     def __init__(self, addr, port):
@@ -24,7 +25,6 @@ class Monitor(Thread):
         self.pubsub_queue = []
         self.message_queue = []
         self.sub.subscribe(['performance'])
-
 
     def run(self):
         def start_listener():
