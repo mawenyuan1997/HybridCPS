@@ -26,7 +26,7 @@ class Point(object):
         return hash(self.position)
 
 
-class CentralController(Thread):
+class Scheduler(Thread):
 
     def __init__(self, ip, port):
         super().__init__()
@@ -45,7 +45,7 @@ class CentralController(Thread):
         self.listen()
 
     def run(self):
-        time.sleep(10)
+        time.sleep(13)
         current_env = self.knowledge.copy()
         for ra_name, points in current_env['unloading point'].items():
             for pos in points:
@@ -155,6 +155,7 @@ class CentralController(Thread):
             complete_path.append(((abs(path[i].position[0]), abs(path[i].position[1])), ra_addr, ra_name))
         # print(source.position, task, complete_path)
         if not complete_path:    # no path or no need to move
+            # print('no path for {}, {}'.format(source.position, task))
             return               # TODO bug here when no need to move
         _, addr, name = complete_path[-1]
         complete_path = complete_path[:-1]
@@ -196,7 +197,7 @@ class CentralController(Thread):
                             self.message_queue.append(msg)
                             if msg['type'] == 'plan request':
                                 print('CC receive plan request {}, {}'.format(msg['start'], msg['task']))
-                                pa_addr = msg['PA address']
+                                coord_addr = utils.IP['coordinator'], utils.PORT['coordinator']
                                 # sample response
                                 # {'type': 'plan',
                                 # 'path': [[[40, 68], ['127.0.0.1', 7034], 'RobotM12'],
@@ -205,7 +206,7 @@ class CentralController(Thread):
                                 #          ],
                                 # 'processing machine': [['127.0.0.1', 7008], 'MachineA']
                                 # }
-                                self.send_msg(pa_addr, self.optimized_plan[(tuple(msg['start']), msg['task'])])
+                                self.send_msg(coord_addr, self.optimized_plan[(tuple(msg['start']), msg['task'])])
         Thread(target=start_pubsub_listener).start()
         Thread(target=start_socket_listener).start()
 
@@ -213,4 +214,4 @@ class CentralController(Thread):
 if __name__ == "__main__":
     args = sys.argv[1:]
     ip, port = args[0], int(args[1])
-    CentralController(ip, port).start()
+    Scheduler(ip, port).start()

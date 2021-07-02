@@ -6,6 +6,7 @@ import json
 from threading import Thread
 import socket
 import utils
+from utils import send_msg
 
 
 class ProductAgent(Thread):
@@ -18,7 +19,7 @@ class ProductAgent(Thread):
         self.tasks = config['tasks']
         self.next_task_index = 0
         self.interests = config['interests']
-        self.current_mode = start_mode
+        self.schedule_mode, self.dispatch_mode = start_mode
         self.knowledge = {}
         self.type = config['type']
         self.current_pos = tuple(config['start position'])
@@ -31,7 +32,7 @@ class ProductAgent(Thread):
         self.ack_received = False
         self.need_switch = False
         self.sub.subscribe(self.tasks)
-        self.sub.subscribe("transport")  # PA needs transport tasks in addition to processing tasks
+        self.sub.subscribe(['transport', 'dispatching'])  # PA needs transport tasks in addition to processing tasks
         self.listen_thread = None
         self.listen()
 
@@ -49,10 +50,12 @@ class ProductAgent(Thread):
         start = time.time()
         bids = []
         while time.time() - start < 3:
-            while self.pubsub_queue:
+            while self.pubsub_queue and time.time() - start < 3:
                 channel, msg = self.pubsub_queue.pop(0)
                 if msg['type'] == 'bid' and channel == task:
                     bids.append(msg.copy())
+                else:
+                    self.pubsub_queue.append((channel, msg))
         return bids
 
     def distance(self, a, b):
@@ -121,12 +124,6 @@ class ProductAgent(Thread):
         print('{} timeout for finish ack'.format(self.name))
         return False
 
-    def send_msg(self, addr, msg):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            ip, port = addr
-            s.connect((ip, port))
-            s.send(json.dumps(msg).encode())
-
     def distributed_mode(self):
         print('{} run in distributed mode'.format(self.name))
         start_time = time.time()
@@ -155,24 +152,24 @@ class ProductAgent(Thread):
 
             # send control command to transport RAs one by one
             for bid, pos in ra_team:
-                self.send_msg(bid['RA address'], {'type': 'order',
-                                                  'task': 'transport',
-                                                  'start': self.current_pos,
-                                                  'destination': pos,
-                                                  'PA address': (self.ip, self.port),
-                                                  'PA name': self.name
-                                                  })
+                send_msg(bid['RA address'], {'type': 'order',
+                                             'task': 'transport',
+                                             'start': self.current_pos,
+                                             'destination': pos,
+                                             'PA address': (self.ip, self.port),
+                                             'PA name': self.name
+                                             })
                 if_finished = self.wait_for_finish(bid['RA name'],
                                                    (self.distance(self.current_pos, pos) / bid['velocity']))
                 # TODO handle timeout
                 self.current_pos = pos
 
             # send control command to processing RA
-            self.send_msg(best_bid['RA address'], {'type': 'order',
-                                                   'task': task,
-                                                   'PA address': (self.ip, self.port),
-                                                   'PA name': self.name
-                                                   })
+            send_msg(best_bid['RA address'], {'type': 'order',
+                                              'task': task,
+                                              'PA address': (self.ip, self.port),
+                                              'PA name': self.name
+                                              })
 
             if_finished = self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
             # TODO handle timeout
@@ -181,15 +178,15 @@ class ProductAgent(Thread):
 
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
-    def wait_for_response(self, msg_type, timeout):
+    def wait_for_response(self, channel, msg_type, timeout):
         start = time.time()
         while time.time() - start < timeout:
-            while self.message_queue:
-                msg = self.message_queue.pop(0)
-                if msg['type'] == msg_type:
+            while self.pubsub_queue:
+                ch, msg = self.pubsub_queue.pop(0)
+                if ch == channel and msg['type'] == msg_type:
                     print('{} gets {}'.format(self.name, msg_type))
                     return msg
-                self.message_queue.append(msg)
+                self.pubsub_queue.append((ch, msg))
         print('{} timeout for {}'.format(self.name, msg_type))
         return {}
 
@@ -206,39 +203,43 @@ class ProductAgent(Thread):
                    'start': self.current_pos,
                    'task': task,
                    'PA address': (self.ip, self.port)}
-            self.send_msg((utils.IP['central controller'], utils.PORT['central controller']), msg)
+            self.client.publish('dispatching', json.dumps(msg))
 
             print('{} ask for central controller plan'.format(self.name))
 
-            plan = self.wait_for_response('plan', 10)
-            print('{} get plan {}'.format(self.name, plan))
+            if self.dispatch_mode == 'distributed':
+                plan = self.wait_for_response('dispatching', 'plan', 10)
+                print('{} get plan {}'.format(self.name, plan))
 
-            for pos, ra_addr, ra_name in plan['path']:
-                self.send_msg(ra_addr, {'type': 'order',
-                                        'task': 'transport',
-                                        'start': self.current_pos,
-                                        'destination': pos,
-                                        'PA address': (self.ip, self.port),
-                                        'PA name': self.name
-                                        })
+                for pos, ra_addr, ra_name in plan['path']:
+                    send_msg(ra_addr, {'type': 'order',
+                                       'task': 'transport',
+                                       'start': self.current_pos,
+                                       'destination': pos,
+                                       'PA address': (self.ip, self.port),
+                                       'PA name': self.name
+                                       })
+                    self.wait_for_finish(ra_name, 100)
+                    self.current_pos = tuple(pos)
+
+                # send control command to processing RA
+                ra_addr, ra_name = plan['processing machine']
+                send_msg(ra_addr, {'type': 'order',
+                                   'task': self.tasks[self.next_task_index],
+                                   'PA address': (self.ip, self.port),
+                                   'PA name': self.name
+                                   })
+
                 self.wait_for_finish(ra_name, 100)
-                self.current_pos = tuple(pos)
+            else:
+                pass  # TODO wait for central controller's finish ack
 
-            # send control command to processing RA
-            ra_addr, ra_name = plan['processing machine']
-            self.send_msg(ra_addr, {'type': 'order',
-                                    'task': self.tasks[self.next_task_index],
-                                    'PA address': (self.ip, self.port),
-                                    'PA name': self.name
-                                    })
-
-            self.wait_for_finish(ra_name, 100)
             self.next_task_index += 1
 
             # suppose task 1 need distributed mode
             # if self.next_task_index == 1:
             #     print('PA send switch request')
-            #     self.send_msg((utils.IP['coordinator'], utils.PORT['coordinator']), {'type': 'need switch'})
+            #     send_msg((utils.IP['coordinator'], utils.PORT['coordinator']), {'type': 'need switch'})
             #     time.sleep(3)
         print('{} finished in {}s'.format(self.name, time.time() - start_time))
 
@@ -252,24 +253,7 @@ class ProductAgent(Thread):
         self.distributed_mode()
 
     def run(self):
-        # if self.type == 'rush order':
-        #     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        #         s.connect((utils.IP['pubsub'], utils.PORT['coordinator']))
-        #         s.send(json.dumps({'type': 'switch to centralized request',
-        #                            'RAs': [(utils.IP['Node1'], utils.PORT['RA1']),
-        #                                    (utils.IP['Node2'], utils.PORT['RA2']),
-        #                                    (utils.IP['Node3'], utils.PORT['RA3']),
-        #                                    (utils.IP['Node4'], utils.PORT['RA4'])]}).encode())
-        #         data = s.recv(1024)
-        #     msg = json.loads(data.decode())
-        #     if msg['type'] == 'agree to switch':
-        #         self.switch_to_centralized()
-        #         self.centralized_mode()
-        #     else:
-        #         self.distributed_mode()
-        # elif self.type == 'normal order':
-        #     self.distributed_mode()
-        if self.current_mode == 'centralized':
+        if self.schedule_mode == 'centralized':
             self.centralized_mode()
         else:
             self.distributed_mode()
@@ -294,16 +278,9 @@ class ProductAgent(Thread):
         def start_pubsub_listener():
             for m in self.sub.listen():
                 if m.get("type") == "message":
-                    # latency = time.time() - float(m['data'])
-                    # print('Recieved: {0}'.format(latency))
                     channel = m['channel']
                     msg = json.loads(m['data'])
                     self.pubsub_queue.append((channel, msg))
-                    # else:
-                    #     if channel in self.knowledge:
-                    #         self.knowledge[channel][msg['RA name']] = msg['content']
-                    #     else:
-                    #         self.knowledge[channel] = {msg['RA name']: msg['content']}
 
         self.listen_thread = Thread(target=start_pubsub_listener)
         self.listen_thread.start()
@@ -317,7 +294,7 @@ if __name__ == "__main__":
     addr = args[1]
     port = int(args[2])
     config_file = args[3]
-    start_mode = args[4]
+    start_mode = (args[4], args[5])
 
     f = open(config_file, )
     config = json.load(f)

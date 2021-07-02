@@ -1,3 +1,6 @@
+import socket
+import json
+
 IP = {
     'Node1': '192.168.1.1',
     'Node2': '192.168.1.2',
@@ -5,13 +8,15 @@ IP = {
     'Node4': '192.168.1.4',
     'pubsub': '127.0.0.1',
     'coordinator': '127.0.0.1',
-    'central controller': '127.0.0.1'
+    'monitor': '127.0.0.1',
+    'scheduler': '127.0.0.1'
 }
 
 PORT = {
     'pubsub': 6379,
     'coordinator': 4000,
-    'central controller': 9000,
+    'monitor': 4001,
+    'scheduler': 9000,
     'PA start': 8000,
     'RA start': 7000
 }
@@ -31,5 +36,13 @@ COMMAND_ORDER_TIMEOUT = 100000
 STD_ERR = 1
 INF = 1000000
 
+
 def distance(a, b):
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+def send_msg(addr, msg):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        ip, port = addr
+        s.connect((ip, port))
+        s.send(json.dumps(msg).encode())

@@ -15,7 +15,7 @@ class SemiconductorMfg(object):
 
         pubsub = self.net.get('pubsub')
         pubsub.cmd('redis-server redis-stable/redis.conf &')
-        pubsub.cmd('python3 HybridCPS/Coordinator.py {} {} &'.format(utils.IP['pubsub'], utils.PORT['coordinator']))
+        pubsub.cmd('python3 HybridCPS/coordinator.py {} {} &'.format(utils.IP['pubsub'], utils.PORT['coordinator']))
 
     def stop(self):
         self.net.stop()
