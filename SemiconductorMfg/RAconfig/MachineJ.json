@@ -1,10 +1,10 @@
 {
-  "tasks": ["s3", "s6"],
+  "tasks": ["S3", "S6"],
   "data": {
     "location": [90, 80],
     "capability": {
-      "s3": 55,
-      "s6": 10
+      "S3": 55,
+      "S6": 10
     }
   },
   "resource address": ["127.0.0.1", 5009]

@@ -79,7 +79,7 @@ class Coordinator(Thread):
                                                                                                utils.PORT[
                                                                                                    'PA start'] + self.pa_num,
                                                                                                msg['config file'],
-                                                                                               'distributed',
+                                                                                               'centralized',
                                                                                                'distributed'))
                                 self.pa_num += 1
                             elif msg['type'] == 'new resource':
@@ -89,7 +89,7 @@ class Coordinator(Thread):
                                                                                              utils.PORT[
                                                                                                  'RA start'] + self.ra_num,
                                                                                              msg['config file'],
-                                                                                             'distributed'))
+                                                                                             'centralized'))
                                 self.ra_num += 1
 
         Thread(target=start_listener).start()

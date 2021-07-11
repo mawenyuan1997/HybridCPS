@@ -112,7 +112,7 @@ class ProductAgent(Thread):
                                               }))
 
     # wait for RA's finish ack
-    def wait_for_finish(self, ra_name, finish_time, timeout=10):
+    def wait_for_finish(self, ra_name, finish_time, timeout=12):
         print('{} wait ra {} finish'.format(self.name, ra_name))
         start = time.time()
         while time.time() - start < finish_time + timeout:
@@ -163,6 +163,9 @@ class ProductAgent(Thread):
                 if_finished = self.wait_for_finish(bid['RA name'],
                                                    (distance(self.current_pos, pos) / bid['velocity']))
                 # TODO handle timeout
+                if not if_finished:
+                    print('PA end')
+                    return
                 self.current_pos = pos
 
             # send control command to processing RA
@@ -172,8 +175,11 @@ class ProductAgent(Thread):
                                               'PA name': self.name
                                               })
 
-            if_finished = self.wait_for_finish(best_bid['RA name'], best_bid['processing time'])
+            if_finished = self.wait_for_finish(best_bid['RA name'], best_bid['processing time'], timeout=200)
             # TODO handle timeout
+            if not if_finished:
+                print('PA end')
+                return
             self.current_pos = tuple(best_bid['RA location'])
             self.next_task_index += 1
 

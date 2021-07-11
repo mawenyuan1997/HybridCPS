@@ -1,10 +1,10 @@
 {
-  "tasks": ["s1", "s5"],
+  "tasks": ["S1", "S5"],
   "data": {
     "location": [70, 80],
     "capability": {
-      "s1": 75,
-      "s5": 85
+      "S1": 75,
+      "S5": 85
     }
   },
   "resource address": ["127.0.0.1", 5007]

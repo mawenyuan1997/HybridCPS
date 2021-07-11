@@ -54,62 +54,64 @@ class Scheduler(Thread):
         # find optimal path for every (source, task) pair
         for ra_name, points in current_env['unloading point'].items():
             for pos in points:
-                for task in ['s1', 's2', 's3', 's4', 's5', 's6']:
+                for task in ['S1', 'S2', 'S3', 'S4', 'S5', 'S6']:
                     self.optimize(Point(tuple(pos)), task, current_env)
 
     # use Dijkstra to compute shortest path that will finish specific task starting from source
     # To represent processing time, add an artificial point (entrance) and an edge
     def optimize(self, source, task, current_env):
-        # print('current env: {}'.format(current_env))
         # build graph
         machine_map = {}
         vertex = set()
         velocity = {}
-        process_ra_info = {}
+        process_ra_info = {}  # processing edge => (ra_address, ra_name)
+        # add processing edge
         for ra_name in current_env['location'].keys():
             if 'Machine' in ra_name:
                 pos = tuple(current_env['location'][ra_name])
                 cap = current_env['capability'][ra_name]
-                entrance = Point((-pos[0], -pos[1]), capability=cap)  # entrance is negative coordinate
-                exit = Point(pos, capability=cap)
+                entrance = Point((-pos[0], -pos[1]), capability=cap)  # entrance is the negative of machine coordinate
+                exit = Point(pos, capability=cap)               # exit is the machine coordinate
                 vertex.add(entrance)
                 vertex.add(exit)
                 entrance.add_neighbor(exit)
                 process_ra_info[(entrance, exit)] = (current_env['RA address'][ra_name], ra_name)
                 machine_map[pos] = (entrance, exit)
-        ra_map = {}
+
+                if source == exit and task in cap: # no need to move
+                    self.optimized_plan[(source.position, task)] = {'type': 'plan',
+                                                                    'path': [],
+                                                                    'processing machine': process_ra_info[(entrance, exit)]}
+                    return
+        ra_map = {}  # (x, y) => Point
+        # add transport edges
         for ra_name in current_env['location'].keys():
             if 'Robot' in ra_name or 'Buffer' in ra_name:
                 edges = current_env['edges'][ra_name]
                 for begin, end in edges:
                     begin, end = tuple(begin), tuple(end)
-                    if begin not in ra_map:
+                    # find begin/end point, create and add them to map for first time
+                    if begin in machine_map:  # edge from an exit of a processing edge
+                        begin_point = machine_map[begin][1]
+                    elif begin not in ra_map:
                         begin_point = Point(begin)
                         ra_map[begin] = begin_point
                         vertex.add(begin_point)
                     else:
                         begin_point = ra_map[begin]
-                    if end not in ra_map:
+
+                    if end in machine_map:  # edge to an entrance of a processing edge
+                        end_point = machine_map[end][0]
+                    elif end not in ra_map:
                         end_point = Point(end)
                         ra_map[end] = end_point
                         vertex.add(end_point)
                     else:
                         end_point = ra_map[end]
 
-                    if begin in machine_map:
-                        exit_point = machine_map[begin][1]
-                        exit_point.add_neighbor(end_point)
-                        velocity[(exit_point, end_point)] = current_env['velocity'][ra_name]
-                        process_ra_info[(exit_point, end_point)] = (current_env['RA address'][ra_name], ra_name)
-                    elif end in machine_map:
-                        entrance_point = machine_map[end][0]
-                        begin_point.add_neighbor(entrance_point)
-                        velocity[(begin_point, entrance_point)] = current_env['velocity'][ra_name]
-                        process_ra_info[(begin_point, entrance_point)] = (current_env['RA address'][ra_name], ra_name)
-                    else:
-                        begin_point.add_neighbor(end_point)
-                        velocity[(begin_point, end_point)] = current_env['velocity'][ra_name]
-                        process_ra_info[(begin_point, end_point)] = (current_env['RA address'][ra_name], ra_name)
+                    begin_point.add_neighbor(end_point)
+                    velocity[(begin_point, end_point)] = current_env['velocity'][ra_name]
+                    process_ra_info[(begin_point, end_point)] = (current_env['RA address'][ra_name], ra_name)
 
         # shortest path
         dist, prev = {}, {}
@@ -118,7 +120,6 @@ class Scheduler(Thread):
             dist[v] = utils.INF
             prev[v] = None
             Q.add(v)
-
         dist[source] = 0
         destination = set()
         while Q:
@@ -133,7 +134,7 @@ class Scheduler(Thread):
             Q.remove(min_u)
             for v in min_u.neighbors:
                 length = utils.INF
-                if v.position[0] == - (min_u.position[0]):  # machine processing edge
+                if v.position[0] == - (min_u.position[0]) and v.position[1] == - (min_u.position[1]):  # machine processing edge
                     if task in v.capability:
                         length = v.capability[task]
                         destination.add(v)
@@ -143,7 +144,7 @@ class Scheduler(Thread):
                 if alt < dist[v]:
                     dist[v] = alt
                     prev[v] = min_u
-
+        # find closest machine
         target = None
         min_dist = utils.INF
         for x in destination:
@@ -155,15 +156,14 @@ class Scheduler(Thread):
         while u:
             path.insert(0, u)
             u = prev[u]
-
+        # complete path includes transport ra info
         complete_path = []
         for i in range(1, len(path)):
             ra_addr, ra_name = process_ra_info[(path[i-1], path[i])]
             complete_path.append(((abs(path[i].position[0]), abs(path[i].position[1])), ra_addr, ra_name))
-        # print(source.position, task, complete_path)
-        if not complete_path:    # no path or no need to move
-            # print('no path for {}, {}'.format(source.position, task))
-            return               # TODO bug here when no need to move
+
+        if not complete_path:
+            return               # TODO no path
         _, addr, name = complete_path[-1]
         complete_path = complete_path[:-1]
         self.optimized_plan[(source.position, task)] = {'type': 'plan',

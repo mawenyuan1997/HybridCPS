@@ -9,6 +9,7 @@ import socket
 import utils
 from utils import distance
 import os
+import select
 
 
 class ResourceAgent(Thread):
@@ -38,7 +39,7 @@ class ResourceAgent(Thread):
         self.pubsub_queue = []
         self.message_queue = []
         self.listen()
-        Thread(target=self.get_data).start()
+        # Thread(target=self.get_data).start()
 
     # for distributed mode
     def wait_for_task(self):
@@ -94,16 +95,26 @@ class ResourceAgent(Thread):
         # send order command to resource
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.connect((self.resource_addr[0], self.resource_addr[1]))
-            s.send(json.dumps(msg).encode()+b'\n')
+            s.send(json.dumps(msg).encode() + b'\n')
 
-        time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))   # delay some time to simulate machine processing
+            # time.sleep(abs(np.random.normal(duration, utils.STD_ERR)))   # delay some time to simulate machine processing
 
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.connect((msg['PA address'][0], msg['PA address'][1]))
-            s.send(json.dumps({'type': 'finish ack',
-                               'task': task,
-                               'RA name': self.name
-                               }).encode())
+            timeout = 10
+            start = time.time()
+            # TODO: add timeout
+            received = s.recv(1000)
+
+            if received:
+                ack_msg = json.loads(received.decode())
+                if ack_msg['type'] == 'finish ack':
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ss:
+                        ss.connect((msg['PA address'][0], msg['PA address'][1]))
+                        ss.send(json.dumps({'type': 'finish ack',
+                                            'task': task,
+                                            'RA name': self.name
+                                            }).encode())
+            else:
+                print('{} timeout for finish ack'.format(self.name))
 
     def distributed_mode(self):
         # print('{} start to run distributed mode'.format(self.name))
@@ -136,6 +147,7 @@ class ResourceAgent(Thread):
                                                        }))
                     time.sleep(1)
                 time.sleep(5)
+
         if not self.data_publish_thread:
             self.data_publish_thread = Thread(target=publish_data)
             self.data_publish_thread.start()
@@ -204,7 +216,7 @@ class ResourceAgent(Thread):
             s.connect((self.resource_addr[0], self.resource_addr[1]))
             while True:
                 s.send(json.dumps({'type': 'data request'
-                                   }).encode()+b'\n')
+                                   }).encode() + b'\n')
                 data = s.recv(1024)
                 msg = json.loads(data.decode()[:-1])
                 # TODO update resource data

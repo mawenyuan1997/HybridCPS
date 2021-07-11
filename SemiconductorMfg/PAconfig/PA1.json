@@ -1,6 +1,6 @@
 {
   "type": "normal order",
-  "tasks": ["s1", "s2", "s3", "s4", "s5", "s6"],
+  "tasks": ["S1", "S2", "S3", "S4", "S5", "S6"],
   "interests": ["location", "capability", "unloading point", "destination"],
   "start position": [18, 60]
 }
