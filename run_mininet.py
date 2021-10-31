@@ -27,7 +27,7 @@ class SemiconductorMfg(object):
         Nodes = [None] * n
         for i in range(n):
             Nodes[i] = self.net.get('Node'+str(i))
-            Nodes[i].cmd('python3 HybridCPS/robot.py {} {} &'.format(utils.IP['Node'+str(i)], 8000))
+            Nodes[i].cmd('python3 HybridCPS/robot.py {} {} &'.format(utils.IP['Node'+str(i)], 4000))
 
         time.sleep(1)
         cc = self.net.get('cc')
