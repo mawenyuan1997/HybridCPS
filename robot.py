@@ -35,7 +35,7 @@ class Robot(Thread):
                             self.receive_time.append(time.time())
 
         Thread(target=start_socket_listener).start()
-        time.sleep(2)
+        time.sleep(3)
         print(50.0 / (max(self.receive_time) - min(self.receive_time)))
 
 if __name__ == "__main__":
