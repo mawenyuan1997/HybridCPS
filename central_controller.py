@@ -20,7 +20,7 @@ class CentralController(Thread):
         for i in range(self.n):
             Thread(target=self.send_control, args=(i,)).start()
 
-    def send_control(node):
+    def send_control(self, node):
         for i in range(50):
             send_msg((utils.IP['Node' + str(node)], 8000), {'velocity': (10, 10)})
             time.sleep(1.0 / 50)
