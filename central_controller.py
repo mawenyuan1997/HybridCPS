@@ -17,14 +17,13 @@ class CentralController(Thread):
         self.n = n
 
     def run(self):
-        def send_control(node):
-            for i in range(50):
-                print(utils.IP['Node' + str(node)])
-                send_msg((utils.IP['Node' + str(node)], 8000), {'velocity': (10, 10)})
-                time.sleep(1.0/50)
-
         for i in range(self.n):
-            Thread(target=send_control, args=(i,)).start()
+            Thread(target=self.send_control, args=(i,)).start()
+
+    def send_control(node):
+        for i in range(50):
+            send_msg((utils.IP['Node' + str(node)], 8000), {'velocity': (10, 10)})
+            time.sleep(1.0 / 50)
 
 if __name__ == "__main__":
     args = sys.argv[1:]
