@@ -28,4 +28,4 @@ class CentralController(Thread):
 if __name__ == "__main__":
     args = sys.argv[1:]
     n = args[0]
-    CentralController().start(n)
+    CentralController(n).start()
