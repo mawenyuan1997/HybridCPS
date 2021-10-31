@@ -14,7 +14,6 @@ class Robot(Thread):
 
     def __init__(self, ip, port):
         super().__init__()
-        self.name = name
         self.ip = ip
         self.port = port
         self.receive_time = []
