@@ -43,4 +43,4 @@ if __name__ == "__main__":
     args = sys.argv[1:]
     ip = args[0]
     port = int(args[1])
-    Robot().start(ip, port)
+    Robot(ip, port).start()
