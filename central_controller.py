@@ -24,9 +24,10 @@ class CentralController(Thread):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             ip, port = utils.IP['Node' + str(node)], 4000
             s.connect((ip, port))
-            for i in range(50):
-                s.send(json.dumps({'velocity': (10, 10)}).encode())
-                time.sleep(1.0 / 50)
+            for sec in range(10):
+                for i in range(50):
+                    s.send(json.dumps({'velocity': (10, 10)}).encode())
+                    time.sleep(1.0 / 50)
 
 if __name__ == "__main__":
     args = sys.argv[1:]
