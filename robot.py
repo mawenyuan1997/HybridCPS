@@ -45,13 +45,14 @@ class Robot(Thread):
             tail_latency = max(tail_latency, self.receive_time[i+1] - (self.receive_time[0] + i/50.0))
         print('teil latency: {}'.format(tail_latency))
         j = 0
-        miss = 0
+        miss = []
         for i in range(len(self.receive_time) - 1):
             while j < len(self.receive_time) and self.receive_time[j] < self.receive_time[0] + i / 50.0:
                 j += 1
             if self.receive_time[j] > self.receive_time[0] + (i + 1) / 50.0:
-                miss += 1
-        print('miss: {}'.format(miss))
+                miss.append(i)
+        print('miss: {}'.format(len(miss)))
+        print(miss)
 
 
 if __name__ == "__main__":
