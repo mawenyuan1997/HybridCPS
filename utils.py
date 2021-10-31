@@ -14,7 +14,7 @@ IP = {
     'Node9': '192.168.1.9',
     'Node10': '192.168.1.10',
     'Node11': '192.168.1.11',
-    'central controller': '127.0.0.1',
+    'central controller': '192.168.2.11',
     'coordinator': '127.0.0.1',
     'monitor': '127.0.0.1',
     'scheduler': '127.0.0.1'
