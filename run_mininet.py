@@ -60,4 +60,4 @@ if __name__ == "__main__":
     net = Mininet(topo=topo)
 
     hybridcps = SemiconductorMfg(net=net)
-    hybridcps.test_distributed()
+    hybridcps.test_centralized()
