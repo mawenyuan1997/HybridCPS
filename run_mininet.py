@@ -23,7 +23,7 @@ class SemiconductorMfg(object):
 
     def test_centralized(self):
 
-        n = 4
+        n = 6
         Nodes = [None] * n
         for i in range(n):
             Nodes[i] = self.net.get('Node'+str(i))
