@@ -44,7 +44,7 @@ MAC = {
     'Node9': '00:1D:9C:C8:BD:F9',
     'Node10': '00:2D:9C:C8:BD:F3',
     'Node11': '00:3D:9C:C8:BD:F3',
-    'pubsub': 'AA:AA:AA:AA:AA:AA',
+    'central controller': 'AA:AA:AA:AA:AA:AA',
 }
 
 BID_CONFIRM_TIMEOUT = 5
