@@ -8,15 +8,15 @@ class TestTopo(Topo):
 
         switch = self.addSwitch('s1')
 
-        pubsub = self.addHost(
-            'pubsub',
-            ip=IP['pubsub'] + NETMASK,
-            mac=MAC['pubsub'])
-        self.addLink(pubsub, switch)
+        cc = self.addHost(
+            'cc',
+            ip=IP['central controller'] + NETMASK,
+            mac=MAC['central controller'])
+        self.addLink(cc, switch)
 
-        nNode = 4
+        nNode = 10
 
-        for i in range(1, nNode + 1):
+        for i in range(nNode):
             name = 'Node' + str(i)
             node = self.addHost(
                 name,
