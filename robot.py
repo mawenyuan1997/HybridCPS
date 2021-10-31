@@ -38,7 +38,13 @@ class Robot(Thread):
 
         Thread(target=start_socket_listener).start()
         time.sleep(3)
-        print(50.0 / (max(self.receive_time) - min(self.receive_time)))
+        print('total time: {}'.format(max(self.receive_time) - min(self.receive_time)))
+        print('total receive: {}'.format(len(self.receive_time)))
+        self.receive_time.sort()
+        tail_latency = 0
+        for i in range(len(self.receive_time) - 1):
+            tail_latency = max(tail_latency, self.receive_time[i+1] - self.receive_time[i])
+        print('teil latency: {}'.format(tail_latency))
 
 if __name__ == "__main__":
     args = sys.argv[1:]
