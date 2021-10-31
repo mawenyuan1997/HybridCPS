@@ -22,7 +22,7 @@ class Robot(Thread):
         def start_socket_listener():
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.bind((self.ip, self.port))
-                print('listen')
+                print(self.ip + ' listen')
                 s.listen()
                 while True:
                     conn, addr = s.accept()
