@@ -16,6 +16,7 @@ class Robot(Thread):
         super().__init__()
         self.ip = ip
         self.port = port
+        self.message_queue = []
         self.receive_time = []
 
     def run(self):

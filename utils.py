@@ -60,5 +60,6 @@ def distance(a, b):
 def send_msg(addr, msg):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         ip, port = addr
+        print(ip, port)
         s.connect((ip, port))
         s.send(json.dumps(msg).encode())
