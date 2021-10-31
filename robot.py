@@ -42,7 +42,7 @@ class Robot(Thread):
         self.receive_time.sort()
         tail_latency = 0
         for i in range(len(self.receive_time) - 1):
-            tail_latency = max(tail_latency, self.receive_time[i+1] - self.receive_time[i])
+            tail_latency = max(tail_latency, self.receive_time[i+1] - (self.receive_time[0] + i/50.0))
         print('teil latency: {}'.format(tail_latency))
 
 if __name__ == "__main__":
